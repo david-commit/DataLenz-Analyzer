@@ -44,7 +44,7 @@ export default function TabLayout() {
         name="history"
         options={{
           title: 'History',
-          tabBarIcon: ({ color, size }) => <ChartLine size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <LineChart size={size} color={color} />,
           headerShown: false,
         }}
       />
