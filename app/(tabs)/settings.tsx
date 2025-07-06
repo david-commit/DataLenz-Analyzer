@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Switch, Pressable, ScrollView, useColorScheme, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { Moon, Sun, Bell, Globe, VolumeX, Volume2, FileText, CircleHelp as HelpCircle, Info } from 'lucide-react-native';
+import { Moon, Sun, Bell, Globe, VolumeX, Volume2, FileText, CircleHelp as HelpCircle, Info, LogOut, User } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
 import colors from '@/constants/colors';
 
 export default function SettingsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const themeColors = isDark ? colors.dark : colors.light;
+  const { user, logout } = useAuth();
   
   // Settings state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -26,6 +28,24 @@ export default function SettingsScreen() {
       Alert.alert('Dark mode settings would be applied here');
     }
   };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: logout,
+        },
+      ]
+    );
+  };
   
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
@@ -36,6 +56,25 @@ export default function SettingsScreen() {
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* User Profile Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Profile</Text>
+          
+          <View style={[styles.settingItem, { backgroundColor: themeColors.cardBackground }]}>
+            <View style={styles.settingInfo}>
+              <User size={24} color={themeColors.text} />
+              <View style={styles.userInfo}>
+                <Text style={[styles.settingText, { color: themeColors.text }]}>
+                  {user?.displayName || 'User'}
+                </Text>
+                <Text style={[styles.userEmail, { color: themeColors.textSecondary }]}>
+                  {user?.email}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
         {/* Appearance Section */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Appearance</Text>
@@ -149,6 +188,21 @@ export default function SettingsScreen() {
             </View>
           </Pressable>
         </View>
+
+        {/* Account Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Account</Text>
+          
+          <Pressable 
+            style={[styles.settingItem, { backgroundColor: themeColors.cardBackground }]}
+            onPress={handleLogout}
+          >
+            <View style={styles.settingInfo}>
+              <LogOut size={24} color={themeColors.error} />
+              <Text style={[styles.settingText, { color: themeColors.error }]}>Sign Out</Text>
+            </View>
+          </Pressable>
+        </View>
         
         {/* App Version */}
         <View style={styles.versionContainer}>
@@ -197,10 +251,19 @@ const styles = StyleSheet.create({
   settingInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   settingText: {
     fontSize: 16,
     marginLeft: 12,
+  },
+  userInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  userEmail: {
+    fontSize: 14,
+    marginTop: 2,
   },
   versionContainer: {
     alignItems: 'center',

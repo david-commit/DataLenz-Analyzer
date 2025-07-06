@@ -1,11 +1,13 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { useColorScheme } from 'react-native';
-import { Chrome as Home, Camera, ChartLine as LineChart, Settings } from 'lucide-react-native';
+import { Chrome as Home, Camera, ChartLine as LineChart, Settings, LogIn } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { user } = useAuth();
 
   return (
     <Tabs
@@ -46,14 +48,25 @@ export default function TabLayout() {
           headerShown: false,
         }}
       />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
-          headerShown: false,
-        }}
-      />
+      {user ? (
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
+            headerShown: false,
+          }}
+        />
+      ) : (
+        <Tabs.Screen
+          name="auth"
+          options={{
+            title: 'Login',
+            tabBarIcon: ({ color, size }) => <LogIn size={size} color={color} />,
+            headerShown: false,
+          }}
+        />
+      )}
     </Tabs>
   );
 }
