@@ -1,5 +1,7 @@
-import { Redirect } from 'expo-router';
+import { Redirect } from "expo-router";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
-  return <Redirect href="/home" />;
+  const { isAuthenticated } = useAuth();
+  return <Redirect href={isAuthenticated ? "/home" : "/auth"} />;
 }
