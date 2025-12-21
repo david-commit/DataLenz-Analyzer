@@ -1,6 +1,16 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { authService } from '@/services/auth';
-import { User } from '@/types/auth';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import { authService } from "@/services/auth";
+import { User } from "@/types/auth";
+import {
+  handleGoogleSignIn,
+  handleFacebookSignIn,
+} from "@/utils/oauthHandlers";
 
 interface AuthContextType {
   user: User | null;
@@ -8,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  loginWithFacebook: () => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -31,7 +42,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const currentUser = await authService.initializeAuth();
       setUser(currentUser);
     } catch (error) {
-      console.error('Auth initialization error:', error);
+      console.error("Auth initialization error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -57,7 +68,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const loginWithGoogle = async () => {
     try {
-      const user = await authService.loginWithGoogle();
+      const idToken = await handleGoogleSignIn();
+      if (!idToken) {
+        throw new Error("Failed to get Google ID token");
+      }
+      const user = await authService.loginWithGoogle(idToken);
+      setUser(user);
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const loginWithFacebook = async () => {
+    try {
+      const accessToken = await handleFacebookSignIn();
+      if (!accessToken) {
+        throw new Error("Failed to get Facebook access token");
+      }
+      const user = await authService.loginWithFacebook(accessToken);
       setUser(user);
     } catch (error) {
       throw error;
@@ -69,7 +97,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await authService.logout();
       setUser(null);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
@@ -79,21 +107,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     register,
     loginWithGoogle,
+    loginWithFacebook,
     logout,
     isAuthenticated: !!user,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
