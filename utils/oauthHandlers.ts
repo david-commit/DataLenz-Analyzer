@@ -1,6 +1,5 @@
 import { makeRedirectUri, AuthRequest } from "expo-auth-session";
 import { Platform } from "react-native";
-import { postIdTokenToBackend } from "./postTokenIDToBackend";
 
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
@@ -105,12 +104,7 @@ export async function handleGoogleSignIn(): Promise<string | null> {
   if (result.type === "success" && result.params) {
     console.log(result);
     const idToken = (result.params.id_token as string) || null;
-    // send token to backend if configured
-    try {
-      await postIdTokenToBackend(idToken);
-    } catch (e) {
-      console.warn("[oauthHandlers] failed to post idToken to backend", e);
-    }
+
     return idToken;
   }
 
@@ -202,12 +196,7 @@ export async function handleFacebookSignIn(): Promise<string | null> {
 
   if (result.type === "success" && result.params) {
     const idToken = (result.params.access_token as string) || null;
-    // send token to backend if configured
-    try {
-      await postIdTokenToBackend(idToken);
-    } catch (e) {
-      console.warn("[oauthHandlers] failed to post access_Token to backend", e);
-    }
+
     return idToken;
   }
 
