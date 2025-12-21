@@ -14,6 +14,42 @@ import {
 import { auth } from "@/config/firebase";
 import * as SecureStore from "expo-secure-store";
 
+// Secure storage helpers: use expo-secure-store on native, fall back to AsyncStorage on web
+async function setSecureItem(key: string, value: string) {
+  try {
+    if (await SecureStore.isAvailableAsync()) {
+      await SecureStore.setItemAsync(key, value);
+      return;
+    }
+  } catch (e) {
+    // fall through to AsyncStorage
+  }
+  await AsyncStorage.setItem(key, value);
+}
+
+async function getSecureItem(key: string) {
+  try {
+    if (await SecureStore.isAvailableAsync()) {
+      return await SecureStore.getItemAsync(key);
+    }
+  } catch (e) {
+    // fall through to AsyncStorage
+  }
+  return await AsyncStorage.getItem(key);
+}
+
+async function deleteSecureItem(key: string) {
+  try {
+    if (await SecureStore.isAvailableAsync()) {
+      await SecureStore.deleteItemAsync(key);
+      return;
+    }
+  } catch (e) {
+    // fall through to AsyncStorage
+  }
+  await AsyncStorage.removeItem(key);
+}
+
 const STORAGE_KEYS = {
   USER_DATA: "user_data",
 };
@@ -50,7 +86,7 @@ export class AuthService {
         STORAGE_KEYS.USER_DATA,
         JSON.stringify(userData)
       );
-      await SecureStore.setItemAsync("idToken", token);
+      await setSecureItem("idToken", token);
 
       return userData;
     } catch (error: any) {
@@ -79,7 +115,7 @@ export class AuthService {
         STORAGE_KEYS.USER_DATA,
         JSON.stringify(userData)
       );
-      await SecureStore.setItemAsync("idToken", token);
+      await setSecureItem("idToken", token);
 
       return userData;
     } catch (error: any) {
@@ -89,6 +125,10 @@ export class AuthService {
 
   async loginWithGoogle(idToken: string): Promise<User> {
     try {
+      console.debug(
+        "[authService] loginWithGoogle received idToken:",
+        idToken?.slice?.(0, 32) + "..."
+      );
       const credential = GoogleAuthProvider.credential(idToken);
       const userCredential = await signInWithCredential(auth, credential);
       const user = userCredential.user;
@@ -105,16 +145,21 @@ export class AuthService {
         STORAGE_KEYS.USER_DATA,
         JSON.stringify(userData)
       );
-      await SecureStore.setItemAsync("idToken", token);
+      await setSecureItem("idToken", token);
 
       return userData;
     } catch (error: any) {
+      console.error("[authService] loginWithGoogle error:", error);
       throw new Error(error.message || "Google Sign-In failed");
     }
   }
 
   async loginWithFacebook(accessToken: string): Promise<User> {
     try {
+      console.debug(
+        "[authService] loginWithFacebook received accessToken:",
+        accessToken?.slice?.(0, 32) + "..."
+      );
       const credential = FacebookAuthProvider.credential(accessToken);
       const userCredential = await signInWithCredential(auth, credential);
       const user = userCredential.user;
@@ -131,10 +176,11 @@ export class AuthService {
         STORAGE_KEYS.USER_DATA,
         JSON.stringify(userData)
       );
-      await SecureStore.setItemAsync("idToken", token);
+      await setSecureItem("idToken", token);
 
       return userData;
     } catch (error: any) {
+      console.error("[authService] loginWithFacebook error:", error);
       throw new Error(error.message || "Facebook Sign-In failed");
     }
   }
@@ -143,7 +189,7 @@ export class AuthService {
     try {
       await signOut(auth);
       await AsyncStorage.removeItem(STORAGE_KEYS.USER_DATA);
-      await SecureStore.deleteItemAsync("idToken");
+      await deleteSecureItem("idToken");
 
       if (this.refreshTimer) {
         clearTimeout(this.refreshTimer);
@@ -161,8 +207,12 @@ export class AuthService {
           unsubscribe();
 
           if (firebaseUser) {
+            console.debug(
+              "[authService] onAuthStateChanged: firebaseUser present",
+              firebaseUser.uid
+            );
             const token = await getIdToken(firebaseUser);
-            await SecureStore.setItemAsync("idToken", token);
+            await setSecureItem("idToken", token);
 
             const userData: User = {
               localId: firebaseUser.uid,
@@ -180,6 +230,10 @@ export class AuthService {
             const cachedUser = await AsyncStorage.getItem(
               STORAGE_KEYS.USER_DATA
             );
+            console.debug(
+              "[authService] onAuthStateChanged: no firebaseUser, cachedUser=",
+              cachedUser
+            );
             resolve(cachedUser ? JSON.parse(cachedUser) : null);
           }
         });
@@ -194,12 +248,12 @@ export class AuthService {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        const token = await SecureStore.getItemAsync("idToken");
+        const token = await getSecureItem("idToken");
         return token || null;
       }
 
       const token = await getIdToken(currentUser);
-      await SecureStore.setItemAsync("idToken", token);
+      await setSecureItem("idToken", token);
       return token;
     } catch (error) {
       console.error("Get valid token error:", error);
@@ -215,7 +269,7 @@ export class AuthService {
 
           if (firebaseUser) {
             const token = await getIdToken(firebaseUser);
-            await SecureStore.setItemAsync("idToken", token);
+            await setSecureItem("idToken", token);
 
             const userData: User = {
               localId: firebaseUser.uid,
