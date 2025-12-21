@@ -99,57 +99,8 @@ export default function ContextInputScreen() {
           </View>
           
           <View style={styles.inputSection}>
-            <Text style={[styles.inputLabel, { color: themeColors.text }]}>Graph Title *</Text>
-            <TextInput
-              style={[styles.textInput, { 
-                backgroundColor: themeColors.inputBackground,
-                color: themeColors.text,
-                borderColor: themeColors.border
-              }]}
-              placeholder="E.g., Quarterly Sales 2023"
-              placeholderTextColor={themeColors.textSecondary}
-              value={graphTitle}
-              onChangeText={setGraphTitle}
-            />
             
-            <Text style={[styles.inputLabel, { color: themeColors.text }]}>Graph Type</Text>
-            <Pressable
-              style={[styles.dropdownButton, { 
-                backgroundColor: themeColors.inputBackground,
-                borderColor: themeColors.border
-              }]}
-              onPress={() => setShowTypeDropdown(!showTypeDropdown)}
-            >
-              <Text style={{ color: graphType ? themeColors.text : themeColors.textSecondary }}>
-                {graphType || 'Select graph type'}
-              </Text>
-              {showTypeDropdown ? (
-                <ChevronUp size={20} color={themeColors.text} />
-              ) : (
-                <ChevronDown size={20} color={themeColors.text} />
-              )}
-            </Pressable>
-            
-            {showTypeDropdown && (
-              <View style={[styles.dropdown, { 
-                backgroundColor: themeColors.cardBackground,
-                borderColor: themeColors.border
-              }]}>
-                {graphTypes.map((type) => (
-                  <Pressable
-                    key={type}
-                    style={[styles.dropdownItem, 
-                      type === graphType && { backgroundColor: themeColors.itemSelected }
-                    ]}
-                    onPress={() => handleTypeSelect(type)}
-                  >
-                    <Text style={{ color: themeColors.text }}>{type}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
-            
-            <Text style={[styles.inputLabel, { color: themeColors.text }]}>Additional Context</Text>
+            <Text style={[styles.inputLabel, { color: themeColors.text }]}>Upload Context</Text>
             <TextInput
               style={[styles.textAreaInput, { 
                 backgroundColor: themeColors.inputBackground,

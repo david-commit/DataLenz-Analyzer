@@ -153,22 +153,36 @@ export default function ResultsScreen() {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/** Prefer values from the full analysis object when available */}
         <View style={styles.graphInfoContainer}>
           <Text style={[styles.graphTitle, { color: themeColors.text }]}>
-            {params.graphTitle || "Untitled Graph"}
+            {analysis?.analysisJson?.title ||
+              analysis?.title ||
+              params.graphTitle ||
+              "Untitled Graph"}
           </Text>
-          {params.graphType ? (
+          {analysis?.analysisJson?.chart_type ||
+          analysis?.type ||
+          params.graphType ? (
             <Text
               style={[styles.graphType, { color: themeColors.textSecondary }]}
             >
-              {params.graphType}
+              {analysis?.analysisJson?.chart_type ||
+                analysis?.type ||
+                params.graphType}
             </Text>
           ) : null}
         </View>
 
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: params.imageUri }}
+            source={{
+              uri:
+                analysis?.imageUrl ||
+                analysis?.imageUri ||
+                params.imageUri ||
+                "",
+            }}
             style={styles.graphImage}
             resizeMode="cover"
           />
@@ -198,7 +212,7 @@ export default function ResultsScreen() {
           {expandedSections.summary && (
             <View style={styles.sectionContent}>
               <Text style={[styles.summaryText, { color: themeColors.text }]}>
-                {analysis?.summary}
+                {analysis?.summary ?? analysis?.analysisJson?.summary ?? ""}
               </Text>
             </View>
           )}
@@ -227,7 +241,7 @@ export default function ResultsScreen() {
 
           {expandedSections.insights && (
             <View style={styles.sectionContent}>
-              {analysis?.insights.map((insight: any, index: number) => (
+              {(analysis?.insights ?? []).map((insight: any, index: number) => (
                 <InsightCard key={index} insight={insight} isDark={isDark} />
               ))}
             </View>
@@ -257,7 +271,7 @@ export default function ResultsScreen() {
 
           {expandedSections.trends && (
             <View style={styles.sectionContent}>
-              {analysis?.trends.map((trend: any, index: number) => (
+              {(analysis?.trends ?? []).map((trend: any, index: number) => (
                 <TrendCard key={index} trend={trend} isDark={isDark} />
               ))}
             </View>

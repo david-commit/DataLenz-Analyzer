@@ -45,6 +45,7 @@ export default function SettingsScreen() {
         },
       ]
     );
+    logout();
   };
   
   return (
