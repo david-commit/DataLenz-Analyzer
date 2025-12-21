@@ -33,7 +33,6 @@ export async function handleGoogleSignIn(): Promise<string | null> {
   const discovery = {
     authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
   } as any;
-
   // On web, open popup and listen for the redirect message from `app/oauthredirect`
   let result: any;
   if (Platform.OS === "web" && typeof window !== "undefined") {
@@ -42,6 +41,7 @@ export async function handleGoogleSignIn(): Promise<string | null> {
     result = await new Promise((resolve) => {
       const timeoutMs = 60000;
       let resolved = false;
+
       const onMessage = (e: MessageEvent) => {
         try {
           if (!e?.data) return;
@@ -71,12 +71,18 @@ export async function handleGoogleSignIn(): Promise<string | null> {
       const popup = window.open(authUrl, "_blank", "width=500,height=700");
 
       const checkInterval = setInterval(() => {
-        if (popup == null || popup.closed) {
-          clearInterval(checkInterval);
-          if (!resolved) {
-            window.removeEventListener("message", onMessage);
-            resolve({ type: "dismiss" });
+        try {
+          const isClosed = popup == null || popup.closed;
+          if (isClosed) {
+            clearInterval(checkInterval);
+            if (!resolved) {
+              window.removeEventListener("message", onMessage);
+              resolve({ type: "dismiss" });
+            }
           }
+        } catch (e) {
+          // Cross-origin opener policy may throw when accessing popup.closed
+          // Treat as still open and continue; the message listener will resolve when message arrives.
         }
       }, 500);
 
@@ -97,6 +103,7 @@ export async function handleGoogleSignIn(): Promise<string | null> {
   }
 
   if (result.type === "success" && result.params) {
+    console.log(result);
     const idToken = (result.params.id_token as string) || null;
     // send token to backend if configured
     try {

@@ -38,8 +38,8 @@ export default function OAuthRedirect() {
         // Try to close the popup after a short delay
         setTimeout(() => {
           try {
+            router.replace("/");
             window.close();
-            // router.replace("/");
           } catch (e) {
             // ignore
           }
