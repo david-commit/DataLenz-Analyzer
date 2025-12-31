@@ -17,7 +17,6 @@ import {
   Moon,
   Sun,
   Bell,
-  Globe,
   VolumeX,
   Volume2,
   FileText,
@@ -25,8 +24,6 @@ import {
   Info,
   LogOut,
   User,
-  Delete,
-  DeleteIcon,
   UserRoundX,
 } from "lucide-react-native";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,7 +41,6 @@ export default function ProfileScreen() {
   const [textToSpeechEnabled, setTextToSpeechEnabled] = useState(true);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(isDark);
-  const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [selectedVoice, setSelectedVoice] = useState("Default");
 
   // Mock function for Profile that would actually change system Profile
@@ -92,6 +88,22 @@ export default function ProfileScreen() {
       setShowDeleteConfirm(false);
     }
   };
+
+  // Try to read version from package.json at project root; fallback to 1.0.0
+  let appName = "DataLens Analyzer";
+  let appVersion = "1.0.0";
+  try {
+    // relative path from app/ -> ../package.json
+    // bundlers usually allow requiring JSON
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const pkg = require("../package.json");
+    if (pkg) {
+      appVersion = pkg.version || appVersion;
+      appName = pkg.name || appName;
+    }
+  } catch (err) {
+    // ignore
+  }
 
   return (
     <SafeAreaView
@@ -177,25 +189,6 @@ export default function ProfileScreen() {
               thumbColor="#f4f3f4"
             />
           </View>
-
-          <View
-            style={[
-              styles.settingItem,
-              { backgroundColor: themeColors.cardBackground },
-            ]}
-          >
-            <View style={styles.settingInfo}>
-              <Globe size={24} color={themeColors.text} />
-              <Text style={[styles.settingText, { color: themeColors.text }]}>
-                Language
-              </Text>
-            </View>
-            <Pressable>
-              <Text style={{ color: themeColors.primary }}>
-                {selectedLanguage}
-              </Text>
-            </Pressable>
-          </View>
         </View>
 
         {/* Notifications Section */}
@@ -247,51 +240,9 @@ export default function ProfileScreen() {
                 Text-to-Speech
               </Text>
             </View>
-            <Switch
-              value={textToSpeechEnabled}
-              onValueChange={setTextToSpeechEnabled}
-              trackColor={{ false: "#767577", true: "#1E88E5" }}
-              thumbColor="#f4f3f4"
-            />
-          </View>
-
-          <View
-            style={[
-              styles.settingItem,
-              { backgroundColor: themeColors.cardBackground },
-            ]}
-          >
-            <View style={styles.settingInfo}>
-              <FileText size={24} color={themeColors.text} />
-              <Text style={[styles.settingText, { color: themeColors.text }]}>
-                Auto-Save Analysis
-              </Text>
-            </View>
-            <Switch
-              value={autoSaveEnabled}
-              onValueChange={setAutoSaveEnabled}
-              trackColor={{ false: "#767577", true: "#1E88E5" }}
-              thumbColor="#f4f3f4"
-            />
-          </View>
-
-          <View
-            style={[
-              styles.settingItem,
-              { backgroundColor: themeColors.cardBackground },
-            ]}
-          >
-            <View style={styles.settingInfo}>
-              <Volume2 size={24} color={themeColors.text} />
-              <Text style={[styles.settingText, { color: themeColors.text }]}>
-                Voice Type
-              </Text>
-            </View>
-            <Pressable>
-              <Text style={{ color: themeColors.primary }}>
-                {selectedVoice}
-              </Text>
-            </Pressable>
+            <Text style={[styles.versionText, { color: themeColors.text }]}>
+              Coming Soon
+            </Text>
           </View>
         </View>
 
@@ -357,7 +308,7 @@ export default function ProfileScreen() {
           <Text
             style={[styles.versionText, { color: themeColors.textSecondary }]}
           >
-            DataLens Analyzer v1.0.0
+            {`${appName} - v${appVersion}`}
           </Text>
         </View>
       </ScrollView>
@@ -542,4 +493,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     justifyContent: "center",
   },
+
 });

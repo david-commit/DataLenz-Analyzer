@@ -33,7 +33,7 @@ export default function AboutScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const themeColors = isDark ? colors.dark : colors.light;
-  const { supportEmail, developerWebsite } = useAppContext();
+  const { supportEmail, developerWebsite, companyName } = useAppContext();
 
   const openLink = async (url: string) => {
     try {
@@ -50,10 +50,10 @@ export default function AboutScreen() {
       <StatusBar style={isDark ? "light" : "dark"} />
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: themeColors.text }]}>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
             {appName}
           </Text>
-          <Text style={[styles.subtitle, { color: themeColors.textSecondary }]}>
+          <Text style={[styles.paragraph, { color: themeColors.textSecondary }]}>
             Version {appVersion}
           </Text>
         </View>
@@ -85,11 +85,11 @@ export default function AboutScreen() {
             Developer
           </Text>
           <Text style={[styles.paragraph, { color: themeColors.text }]}>
-            DataLens Inc.
+            {companyName}
           </Text>
-          <Pressable onPress={() => openLink("mailto:support@example.com")}>
+          <Pressable onPress={() => openLink(`mailto:${supportEmail}`)}>
             <Text style={[styles.link, { color: themeColors.primary }]}>
-              support@example.com
+              {supportEmail}
             </Text>
           </Pressable>
         </View>
@@ -132,20 +132,6 @@ export default function AboutScreen() {
           </Text>
         </View>
 
-        <View
-          style={[
-            styles.sectionSmall,
-            { backgroundColor: themeColors.cardBackground },
-          ]}
-        >
-          <Text
-            style={[styles.paragraph, { color: themeColors.textSecondary }]}
-          >
-            If you need more information for Google Play listing (privacy, data
-            safety, content rating), update the Play Console entries and link
-            the policies above.
-          </Text>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -155,11 +141,23 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: 16 },
   header: { paddingVertical: 24, alignItems: "flex-start" },
-  title: { fontSize: 24, fontWeight: "700" },
-  subtitle: { fontSize: 14, marginTop: 4 },
-  section: { marginBottom: 16, padding: 12, borderRadius: 12 },
-  sectionSmall: { marginBottom: 12, padding: 12, borderRadius: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 8 },
+  section: {
+    marginBottom: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 24,
+    borderRadius: 12,
+  },
+  sectionSmall: {
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingBottom: 24,
+    borderRadius: 12,
+  },
+  sectionTitle: { fontSize: 24, fontWeight: "600", marginBottom: 8 },
   paragraph: { fontSize: 14, lineHeight: 20 },
+  question: { fontSize: 14, fontWeight: "600", marginTop: 8 },
+  answer: { fontSize: 14, marginTop: 4 },
   link: { fontSize: 14, marginTop: 8 },
 });

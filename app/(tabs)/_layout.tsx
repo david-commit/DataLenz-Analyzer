@@ -24,6 +24,13 @@ export default function TabLayout() {
             tabBarStyle: {
               backgroundColor: isDark ? "#121212" : "#FFFFFF",
               borderTopColor: isDark ? "#333333" : "#E0E0E0",
+              height: 140, // increase base height
+              paddingBottom: 32, // extra space for safe area
+              paddingTop: 8,
+            },
+            tabBarLabelStyle: {
+              fontSize: 12,
+              marginTop: 2,
             },
             headerStyle: {
               backgroundColor: isDark ? "#121212" : "#FFFFFF",
