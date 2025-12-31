@@ -35,11 +35,17 @@ export default function OAuthRedirect() {
           // ignore cross-origin errors
         }
 
-        // Try to close the popup after a short delay
+        // Try to close the popup after a short delay. Avoid calling router.replace
+        // inside a popup which can interfere with the opener messaging channel.
         setTimeout(() => {
           try {
-            router.replace("/");
-            window.close();
+            // If this window has an opener, just close it. If not (same-window
+            // flow) navigate the current router to home.
+            if (window.opener) {
+              window.close();
+            } else {
+              router.replace("/");
+            }
           } catch (e) {
             // ignore
           }

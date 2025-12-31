@@ -65,7 +65,7 @@ export default function CameraComponent({ onCapture, cameraRef }: CameraComponen
         style={styles.camera}
         ref={cameraRef}
         facing={cameraType}
-        type={cameraType}
+        // type={cameraType}
       >
         <View style={styles.controls}>
           <Pressable style={styles.flipButton} onPress={toggleCameraType}>

@@ -6,13 +6,13 @@ import { Moon, Sun, Bell, Globe, VolumeX, Volume2, FileText, CircleHelp as HelpC
 import { useAuth } from '@/contexts/AuthContext';
 import colors from '@/constants/colors';
 
-export default function SettingsScreen() {
+export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const themeColors = isDark ? colors.dark : colors.light;
   const { user, logout } = useAuth();
   
-  // Settings state
+  // Profile state
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [textToSpeechEnabled, setTextToSpeechEnabled] = useState(true);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
@@ -20,7 +20,7 @@ export default function SettingsScreen() {
   const [selectedLanguage, setSelectedLanguage] = useState('English');
   const [selectedVoice, setSelectedVoice] = useState('Default');
   
-  // Mock function for settings that would actually change system settings
+  // Mock function for Profile that would actually change system Profile
   const handleDarkModeToggle = () => {
     setDarkModeEnabled(!darkModeEnabled);
     // In a real app, you would use a theme provider to change the theme
@@ -53,13 +53,13 @@ export default function SettingsScreen() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       
       <View style={styles.header}>
-        <Text style={[styles.title, { color: themeColors.text }]}>Settings</Text>
+        <Text style={[styles.title, { color: themeColors.text }]}>Profile</Text>
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* User Profile Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Profile</Text>
+          {/* <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Profile</Text> */}
           
           <View style={[styles.settingItem, { backgroundColor: themeColors.cardBackground }]}>
             <View style={styles.settingInfo}>

@@ -1,11 +1,11 @@
 import React from "react";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
 import { useColorScheme } from "react-native";
 import {
   Chrome as Home,
   Camera,
   ChartLine as LineChart,
-  Settings
+  User2 as User2Icon,
 } from "lucide-react-native";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -63,11 +63,11 @@ export default function TabLayout() {
           />
 
           <Tabs.Screen
-            name="settings"
+            name="profile"
             options={{
-              title: "Settings",
+              title: "Profile",
               tabBarIcon: ({ color, size }) => (
-                <Settings size={size} color={color} />
+                <User2Icon size={size} color={color} />
               ),
               headerShown: false,
             }}

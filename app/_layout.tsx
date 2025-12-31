@@ -3,6 +3,8 @@ import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFrameworkReady } from "@/hooks/useFrameworkReady";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AppProvider } from "@/contexts/AppContext";
+import { LoaderCircle } from "lucide-react-native";
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -21,12 +23,15 @@ export default function RootLayout() {
         if (!currentPath.startsWith("/auth")) {
           router.replace("/auth");
         }
+      } else {
+        // if not authenticated, redirect to home (which will handle login)
+        router.replace("/");
       }
     }, [isAuthenticated, isLoading, router]);
 
     if (isLoading) {
-      // while auth is initializing, render nothing (could render a spinner)
-      return null;
+      // while auth is initializing, render spinner
+      return <LoaderCircle />;
     }
 
     return <>{children}</>;
@@ -34,13 +39,15 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <AuthGate>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </AuthGate>
+      <AppProvider>
+        <AuthGate>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </AuthGate>
+      </AppProvider>
     </AuthProvider>
   );
 }

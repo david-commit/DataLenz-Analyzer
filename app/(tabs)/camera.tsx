@@ -50,15 +50,76 @@ export default function CameraScreen() {
         pathname: "/context-input",
         params: { imageUri: capturedImage },
       });
-    }, 1500);
+    }, 4500);
   };
 
-  const handleSelectFromGallery = () => {
-    // In a real app, this would open the image picker
-    // For this example, we'll use a mock image
+  const handleSelectFromGallery = async () => {
+    if (Platform.OS === "web") {
+      // create a hidden file input
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.onchange = () => {
+        const file = input.files && input.files[0];
+        if (file) {
+          const url = URL.createObjectURL(file);
+          setCapturedImage(url);
+        }
+      };
+      input.click();
+      return;
+    }
+
+    // Try to use expo-image-picker if available at runtime
+    try {
+      // dynamic import to avoid hard dependency
+      // Use concatenated string to avoid some bundlers resolving this at build time
+      // @ts-ignore
+      const ImagePicker = await import("expo-image" + "-picker");
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync?.();
+      if (permission?.granted === false) {
+        alert("Permission to access gallery is required");
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.9,
+      });
+      if (!result.cancelled) {
+        // expo-image-picker returns { assets: [{ uri }] } in newer versions
+        const uri = (result as any).assets?.[0]?.uri || (result as any).uri;
+        if (uri) setCapturedImage(uri);
+      }
+      return;
+    } catch (err) {
+      console.debug(
+        "expo-image-picker not available, falling back to sample image",
+        err
+      );
+    }
+
+    // final fallback: sample image (should rarely happen)
     const mockImage =
       "https://images.pexels.com/photos/6804079/pexels-photo-6804079.jpeg";
     setCapturedImage(mockImage);
+  };
+
+  const handleTakePicture = async () => {
+    try {
+      // cameraRef is forwarded to CameraComponent -> CameraView
+      const cam: any = cameraRef.current;
+      if (cam && typeof cam.takePictureAsync === "function") {
+        const photo = await cam.takePictureAsync();
+        if (photo?.uri) setCapturedImage(photo.uri);
+        return;
+      }
+      // If CameraView doesn't expose takePictureAsync, fallback to analyze flow
+      alert("Camera is not available");
+    } catch (err) {
+      console.error("takePicture error", err);
+      alert("Failed to take picture");
+    }
   };
 
   return (
@@ -175,12 +236,7 @@ export default function CameraScreen() {
                   styles.captureButton,
                   { borderColor: themeColors.primary },
                 ]}
-                onPress={() => {
-                  if (cameraRef.current) {
-                    // In a real app, you would call the takePictureAsync method
-                    handleSelectFromGallery(); // Using mock for demo
-                  }
-                }}
+                onPress={handleTakePicture}
               >
                 <View
                   style={[
@@ -242,7 +298,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   preview: {
-    flex: 1,
+    width: "100%",
+    height: "100%",
   },
   webPlaceholder: {
     flex: 1,

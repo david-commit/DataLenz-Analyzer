@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
 
+// Authorized Domains: https://console.firebase.google.com/u/1/project/datalens-6030b/authentication/settings
 const redirectUrl = makeRedirectUri({ scheme: "myapp", path: "oauthredirect" });
 
 // Helpful debug output for redirect URI registration in Google/Facebook console
