@@ -306,6 +306,9 @@ export default function ProfileScreen() {
               styles.settingItem,
               { backgroundColor: themeColors.cardBackground },
             ]}
+            onPress={() => {
+              router.push("/help-and-support");
+            }}
           >
             <View style={styles.settingInfo}>
               <HelpCircle size={24} color={themeColors.text} />
@@ -320,6 +323,9 @@ export default function ProfileScreen() {
               styles.settingItem,
               { backgroundColor: themeColors.cardBackground },
             ]}
+            onPress={() => {
+              router.push("/about");
+            }}
           >
             <View style={styles.settingInfo}>
               <Info size={24} color={themeColors.text} />

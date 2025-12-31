@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { FileSliders as Sliders, Search } from "lucide-react-native";
+import { FileSliders as Sliders, Search, Camera } from "lucide-react-native";
 import HistoryListItem from "@/components/HistoryListItem";
 import { mockRecentAnalyses } from "@/utils/mockData";
 import { AnalysisType } from "@/types";
@@ -20,6 +20,7 @@ import {
   off as offNavigation,
 } from "@/utils/navigationStore";
 import colors from "@/constants/colors";
+import { router } from "expo-router";
 
 export default function HistoryScreen() {
   const colorScheme = useColorScheme();
@@ -277,17 +278,25 @@ export default function HistoryScreen() {
               { backgroundColor: themeColors.cardBackground },
             ]}
           >
-            <Text style={[styles.emptyStateText, { color: themeColors.text }]}>
-              No analysis history found
-            </Text>
-            <Text
-              style={[
-                styles.emptyStateSubtext,
-                { color: themeColors.textSecondary },
-              ]}
-            >
-              Capture and analyze graphs to build your history
-            </Text>
+            <View>
+              <Text
+                style={[styles.emptyStateText, { color: themeColors.text }]}
+              >
+                No analysis history found
+              </Text>
+              <Text
+                style={[
+                  styles.emptyStateSubtext,
+                  { color: themeColors.textSecondary },
+                ]}
+              >
+                Capture and analyze graphs to build your history
+              </Text>
+            </View>
+            <Pressable style={styles.analyzeButton} onPress={() => {router.push('/camera')}}>
+              <Camera size={24} color="#FFFFFF" />
+              <Text style={styles.analyzeButtonText}>Analyze New Graph</Text>
+            </Pressable>
           </View>
         )}
       </ScrollView>
@@ -365,13 +374,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 40,
+    height: 300
   },
   emptyStateText: {
     fontSize: 18,
     fontWeight: "600",
     marginBottom: 8,
+    textAlign: "center",
   },
   emptyStateSubtext: {
     textAlign: "center",
+  },
+  analyzeButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1E88E5",
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    marginHorizontal: 16,
+    marginTop: 48,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  analyzeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
   },
 });
