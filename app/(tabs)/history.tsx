@@ -15,6 +15,10 @@ import { mockRecentAnalyses } from "@/utils/mockData";
 import { AnalysisType } from "@/types";
 import { authService } from "@/services/auth";
 import { getRecords } from "@/api/analysisRecords";
+import {
+  on as onNavigation,
+  off as offNavigation,
+} from "@/utils/navigationStore";
 import colors from "@/constants/colors";
 
 export default function HistoryScreen() {
@@ -58,6 +62,38 @@ export default function HistoryScreen() {
 
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // listen for analysis updates from Results screen
+    const handler = (payload: any) => {
+      if (!payload || !payload.id) return;
+      setAnalyses((prev) => {
+        const exists = prev.findIndex((a) => a.id === payload.id);
+        const mapped = {
+          id: payload.id,
+          userId: payload.userId,
+          imageUrl: payload.imageUrl,
+          summary: String(payload.summary || ""),
+          analysisJson: payload.analysisJson || {},
+          public: payload.public ?? false,
+          date: payload.createdAt || payload.date || new Date().toISOString(),
+        } as AnalysisType;
+
+        if (exists === -1) {
+          return [mapped, ...prev];
+        }
+        const copy = [...prev];
+        copy[exists] = mapped;
+        return copy;
+      });
+    };
+
+    onNavigation("analysis:updated", handler);
+
+    return () => {
+      offNavigation("analysis:updated", handler);
     };
   }, []);
 

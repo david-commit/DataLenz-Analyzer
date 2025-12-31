@@ -31,6 +31,7 @@ import {
   getNavigationData,
   deleteNavigationData,
   saveNavigationData,
+  emit as emitNavigation,
 } from "@/utils/navigationStore";
 import Button from "@/components/Button";
 import { analyzeRecord } from "@/api/analyze";
@@ -100,6 +101,13 @@ export default function ResultsScreen() {
       } else {
         const key = `analysis:${nanoid()}`;
         saveNavigationData(key, normalized);
+      }
+
+      // Notify listeners (e.g., History screen) that an analysis was updated
+      try {
+        emitNavigation("analysis:updated", normalized);
+      } catch (err) {
+        console.warn("Failed to emit analysis update", err);
       }
       return;
     } catch (err) {
@@ -175,6 +183,9 @@ export default function ResultsScreen() {
   };
 
   if (isLoading) {
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 10000);
     return (
       <SafeAreaView
         style={[

@@ -50,7 +50,7 @@ export default function CameraScreen() {
         pathname: "/context-input",
         params: { imageUri: capturedImage },
       });
-    }, 4500);
+    }, 500);
   };
 
   const handleSelectFromGallery = async () => {
@@ -208,7 +208,7 @@ export default function CameraScreen() {
               ) : (
                 <>
                   <CameraIcon size={24} color="#FFFFFF" />
-                  <Text style={styles.analyzeButtonText}>Analyze Graph</Text>
+                  <Text style={styles.analyzeButtonText}>Proceed to Analyze</Text>
                 </>
               )}
             </Pressable>
@@ -257,7 +257,7 @@ export default function CameraScreen() {
           style={[styles.instructionText, { color: themeColors.textSecondary }]}
         >
           {capturedImage
-            ? 'Review the captured graph and tap "Analyze Graph" to continue'
+            ? 'Review the captured graph and tap "Proceed to Analyze" to continue'
             : "Position the graph within the frame and tap the capture button"}
         </Text>
       </View>

@@ -16,12 +16,13 @@ import { StatusBar } from "expo-status-bar";
 import { Mail, Lock, Eye, EyeOff, User } from "lucide-react-native";
 import { useAuth } from "@/contexts/AuthContext";
 import colors from "@/constants/colors";
+import { router } from "expo-router";
 
 export default function AuthScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const themeColors = isDark ? colors.dark : colors.light;
-  const { login, register, loginWithGoogle, loginWithFacebook } = useAuth();
+  const { login, register, loginWithGoogle, loginWithFacebook, isAuthenticated } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -31,6 +32,11 @@ export default function AuthScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  if (isAuthenticated) {
+    // User is already authenticated, redirect to home
+    router.replace("/home");
+  }
 
   const validateForm = () => {
     if (!email.trim()) {
@@ -315,7 +321,8 @@ export default function AuthScreen() {
                 },
               ]}
               onPress={handleFacebookSignIn}
-              disabled={isLoading}
+              disabled={true}
+              // disabled={isLoading}
             >
               <User size={20} color={themeColors.text} />
               <Text
@@ -346,40 +353,40 @@ export default function AuthScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flex: 1
   },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: 24
   },
   header: {
     alignItems: "center",
     marginTop: 40,
-    marginBottom: 32,
+    marginBottom: 32
   },
   title: {
     fontSize: 28,
     fontWeight: "700",
-    marginBottom: 8,
+    marginBottom: 8
   },
   subtitle: {
     fontSize: 16,
-    textAlign: "center",
+    textAlign: "center"
   },
   errorContainer: {
     padding: 12,
     borderRadius: 8,
-    marginBottom: 16,
+    marginBottom: 16
   },
   errorText: {
     fontSize: 14,
-    textAlign: "center",
+    textAlign: "center"
   },
   form: {
-    marginBottom: 32,
+    marginBottom: 32
   },
   inputContainer: {
-    marginBottom: 16,
+    marginBottom: 16
   },
   inputWrapper: {
     flexDirection: "row",
@@ -387,12 +394,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 12
   },
   input: {
     flex: 1,
     fontSize: 16,
-    marginLeft: 12,
+    marginLeft: 12
   },
   submitButton: {
     backgroundColor: "#1E88E5",
@@ -400,28 +407,28 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: 8
   },
   submitButtonDisabled: {
-    backgroundColor: "#90CAF9",
+    backgroundColor: "#90CAF9"
   },
   submitButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "600"
   },
   divider: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
+    marginVertical: 24
   },
   dividerLine: {
     flex: 1,
-    height: 1,
+    height: 1
   },
   dividerText: {
     marginHorizontal: 16,
-    fontSize: 14,
+    fontSize: 14
   },
   googleButton: {
     flexDirection: "row",
@@ -429,25 +436,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 16
   },
   googleButtonText: {
     fontSize: 16,
     fontWeight: "500",
-    marginLeft: 12,
+    marginLeft: 12
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    paddingBottom: 32,
+    paddingBottom: 32
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 14
   },
   footerLink: {
     fontSize: 14,
     fontWeight: "600",
-    marginLeft: 4,
+    marginLeft: 4
   },
 });
