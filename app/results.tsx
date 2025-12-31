@@ -23,11 +23,8 @@ import {
   Trash2,
   RefreshCcw,
   Share2,
-  Volume2,
-  VolumeX,
 } from "lucide-react-native";
 import colors from "@/constants/colors";
-import { generateMockAnalysis } from "@/utils/mockData";
 import InsightCard from "@/components/InsightCard";
 import TrendCard from "@/components/TrendCard";
 import {
@@ -59,6 +56,7 @@ export default function ResultsScreen() {
     summary: true,
     insights: true,
     trends: true,
+    anomalies: true,
     forecast: true,
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -73,34 +71,43 @@ export default function ResultsScreen() {
 
       const reAnalysis = await analyzeRecord(analysis);
 
-      console.log("Re-analysis result:", reAnalysis);
-
       if (!reAnalysis) {
         throw new Error("Re-analysis failed");
       }
-      // save created record and
-      // If a dataKey param was passed, read the transient analysis object
-      const dataKey = (params as any).dataKey as string | undefined;
+      // Normalize shape: prefer aiResult.analysisJson and aiResult.summary when present
+      const normalized = {
+        ...analysis,
+        ...reAnalysis,
+        analysisJson:
+          reAnalysis?.aiResult?.analysisJson ??
+          reAnalysis?.analysisJson ??
+          analysis?.analysisJson ??
+          null,
+        summary:
+          reAnalysis?.aiResult?.summary ??
+          reAnalysis?.summary ??
+          analysis?.summary ??
+          null,
+      } as any;
 
+      // Update local state with normalized object
+      setAnalysis(normalized);
+
+      // Update transient navigation store: overwrite existing key if present, else create a snapshot key
+      const dataKey = (params as any).dataKey as string | undefined;
       if (dataKey) {
-        // overwrite the existing transient object with the new analysis
-        saveNavigationData(dataKey, reAnalysis);
-        setAnalysis(reAnalysis);
+        saveNavigationData(dataKey, normalized);
       } else {
-        // no existing key — create one for navigation if needed
         const key = `analysis:${nanoid()}`;
-        saveNavigationData(key, reAnalysis);
-        setAnalysis(reAnalysis);
+        saveNavigationData(key, normalized);
       }
+      return;
     } catch (err) {
       console.error("Re-analyze error", err);
     } finally {
       setIsLoading(false);
     }
   };
-
-  console.log("ResultsScreen params:", params);
-  console.log("ResultsScreen analysis:", analysis);
 
   useEffect(() => {
     // If a dataKey param was passed, read the transient analysis object
@@ -109,7 +116,6 @@ export default function ResultsScreen() {
     if (dataKey) {
       const obj = getNavigationData(dataKey);
       if (obj) {
-        console.log("OBJ", obj);
         setAnalysis(obj);
         // optionally delete to free memory
         deleteNavigationData(dataKey);
@@ -117,7 +123,7 @@ export default function ResultsScreen() {
         return;
       }
     }
-  }, [analysis]);
+  }, []);
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -316,7 +322,7 @@ export default function ResultsScreen() {
             <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
               Executive Summary
             </Text>
-            {expandedSections.summary ? (
+            {expanded ? (
               <ChevronUp size={20} color={themeColors.text} />
             ) : (
               <ChevronDown size={20} color={themeColors.text} />
@@ -474,7 +480,7 @@ export default function ResultsScreen() {
           <Button
             icon={<RefreshCcw size={20} color="#FFFFFF" />}
             title="Reanalyze"
-            onPress={handleReAnalyze}
+            onPress={() => handleReAnalyze()}
             style={{ flex: 1, marginRight: 8 }}
           />
 
