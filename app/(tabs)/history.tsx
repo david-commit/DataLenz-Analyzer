@@ -16,7 +16,6 @@ import { AnalysisType } from "@/types";
 import { authService } from "@/services/auth";
 import { getRecords } from "@/api/analysisRecords";
 import colors from "@/constants/colors";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function HistoryScreen() {
   const colorScheme = useColorScheme();
@@ -32,20 +31,18 @@ export default function HistoryScreen() {
 
     async function load() {
       try {
-        // default to mock data while loading or on failure
-        // setAnalyses(mockRecentAnalyses);
-
         const user = await authService.getCurrentUser();
         const token = await authService.getValidToken();
         if (!user || !token) return;
 
-        const payload = await getRecords(user.localId, token);
+        const payload = await getRecords();
 
         // expected payload: array of records with id, userId, imageUrl, aiResult.analysisJson, public, createdAt
         const mapped: AnalysisType[] = (payload || []).map((rec: any) => ({
           id: rec.id,
           userId: rec.userId,
           imageUrl: rec.imageUrl,
+          summary: String(rec.aiResult?.summary || ""),
           analysisJson: rec.aiResult?.analysisJson || {},
           public: rec.public ?? false,
           date: rec.createdAt || rec.date || new Date().toISOString(),

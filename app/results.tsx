@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Share,
   Platform,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
@@ -18,7 +19,9 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
-  Download,
+  Dot,
+  Trash2,
+  RefreshCcw,
   Share2,
   Volume2,
   VolumeX,
@@ -30,8 +33,12 @@ import TrendCard from "@/components/TrendCard";
 import {
   getNavigationData,
   deleteNavigationData,
+  saveNavigationData,
 } from "@/utils/navigationStore";
 import Button from "@/components/Button";
+import { analyzeRecord } from "@/api/analyze";
+import { nanoid } from "nanoid/non-secure";
+import { deleteRecord as deleteRecordApi } from "@/api/analysisRecords";
 
 export default function ResultsScreen() {
   const params = useLocalSearchParams<{
@@ -54,9 +61,46 @@ export default function ResultsScreen() {
     trends: true,
     forecast: true,
   });
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleReAnalyze = async () => {
+    if (!analysis?.id) return;
+    try {
+      setIsLoading(true);
+
+      const reAnalysis = await analyzeRecord(analysis);
+
+      console.log("Re-analysis result:", reAnalysis);
+
+      if (!reAnalysis) {
+        throw new Error("Re-analysis failed");
+      }
+      // save created record and
+      // If a dataKey param was passed, read the transient analysis object
+      const dataKey = (params as any).dataKey as string | undefined;
+
+      if (dataKey) {
+        // overwrite the existing transient object with the new analysis
+        saveNavigationData(dataKey, reAnalysis);
+        setAnalysis(reAnalysis);
+      } else {
+        // no existing key — create one for navigation if needed
+        const key = `analysis:${nanoid()}`;
+        saveNavigationData(key, reAnalysis);
+        setAnalysis(reAnalysis);
+      }
+    } catch (err) {
+      console.error("Re-analyze error", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  console.log("ResultsScreen params:", params);
+  console.log("ResultsScreen analysis:", analysis);
 
   useEffect(() => {
     // If a dataKey param was passed, read the transient analysis object
@@ -65,6 +109,7 @@ export default function ResultsScreen() {
     if (dataKey) {
       const obj = getNavigationData(dataKey);
       if (obj) {
+        console.log("OBJ", obj);
         setAnalysis(obj);
         // optionally delete to free memory
         deleteNavigationData(dataKey);
@@ -72,13 +117,7 @@ export default function ResultsScreen() {
         return;
       }
     }
-
-    // Fallback: simulate API call to generate analysis
-    setTimeout(() => {
-      setAnalysis(generateMockAnalysis(params.graphTitle || "Untitled Graph"));
-      setIsLoading(false);
-    }, 500);
-  }, []);
+  }, [analysis]);
 
   const toggleSection = (section: string) => {
     setExpandedSections((prev) => ({
@@ -87,15 +126,31 @@ export default function ResultsScreen() {
     }));
   };
 
-  const toggleAudio = () => {
-    setIsPlaying(!isPlaying);
-    // In a real app, this would start/stop text-to-speech
+  const handleDeletePress = () => {
+    setShowDeleteConfirm(true);
   };
 
-  const handleExport = () => {
-    // In a real app, this would generate and save a PDF
-    alert("Analysis would be exported as PDF");
+  const confirmDelete = async () => {
+    if (!analysis?.id) return;
+    try {
+      setDeleting(true);
+      await deleteRecordApi(analysis.id);
+      // when deleting an analysis and you stored it under dataKey
+      const dataKey = (params as any).dataKey as string | undefined;
+      if (dataKey) {
+        deleteNavigationData(dataKey);
+      }
+      // then navigate away
+      router.replace("/history");
+    } catch (err) {
+      console.error("Delete failed", err);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
+
+  const cancelDelete = () => setShowDeleteConfirm(false);
 
   const handleShare = async () => {
     if (Platform.OS === "web") {
@@ -143,48 +198,107 @@ export default function ResultsScreen() {
         <Text style={[styles.title, { color: themeColors.text }]}>
           Analysis Results
         </Text>
-        <Pressable style={styles.audioButton} onPress={toggleAudio}>
-          {isPlaying ? (
-            <VolumeX size={24} color={themeColors.text} />
-          ) : (
-            <Volume2 size={24} color={themeColors.text} />
-          )}
+        <Pressable style={styles.trashButton} onPress={handleDeletePress}>
+          <Trash2 size={24} color={"#E53935"} />
         </Pressable>
       </View>
+
+      <Modal visible={showDeleteConfirm} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: themeColors.cardBackground },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: themeColors.text }]}>
+              Confirm delete
+            </Text>
+            <Text
+              style={{ color: themeColors.textSecondary, marginBottom: 12 }}
+            >
+              Are you sure you want to delete this analysis? This action cannot
+              be undone.
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "flex-end",
+                gap: 8,
+              }}
+            >
+              <Pressable
+                onPress={cancelDelete}
+                style={[styles.modalButton, { backgroundColor: "#E0E0E0" }]}
+              >
+                <Text>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={confirmDelete}
+                style={[styles.modalButton, { backgroundColor: "#E53935" }]}
+              >
+                {deleting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={{ color: "#FFFFFF" }}>Delete</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/** Prefer values from the full analysis object when available */}
         <View style={styles.graphInfoContainer}>
           <Text style={[styles.graphTitle, { color: themeColors.text }]}>
-            {analysis?.analysisJson?.title ||
-              analysis?.title ||
-              params.graphTitle ||
-              "Untitled Graph"}
+            {analysis?.analysisJson?.title || "Untitled Graph"}
           </Text>
-          {analysis?.analysisJson?.chart_type ||
-          analysis?.type ||
-          params.graphType ? (
-            <Text
-              style={[styles.graphType, { color: themeColors.textSecondary }]}
-            >
-              {analysis?.analysisJson?.chart_type ||
-                analysis?.type ||
-                params.graphType}
-            </Text>
-          ) : null}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginTop: 10,
+            }}
+          >
+            {/* Analaysis CHART TYPE */}
+            {analysis?.analysisJson?.chart_type ||
+            analysis?.type ||
+            params.graphType ? (
+              <Text
+                style={[
+                  styles.graphType,
+                  {
+                    color: themeColors.textSecondary,
+                    textTransform: "capitalize",
+                  },
+                ]}
+              >
+                Chart Type:{" "}
+                {analysis?.analysisJson?.chart_type ||
+                  analysis?.type ||
+                  params.graphType}
+              </Text>
+            ) : null}
+            {/* Analaysis ID */}
+            {analysis?.id ? (
+              <Text
+                style={[styles.graphType, { color: themeColors.textSecondary }]}
+              >
+                Analysis ID: {analysis?.id}
+              </Text>
+            ) : null}
+          </View>
         </View>
 
+        {/* Image Container */}
         <View style={styles.imageContainer}>
           <Image
             source={{
-              uri:
-                analysis?.imageUrl ||
-                analysis?.imageUri ||
-                params.imageUri ||
-                "",
+              uri: analysis?.imageUrl,
             }}
             style={styles.graphImage}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         </View>
 
@@ -212,7 +326,7 @@ export default function ResultsScreen() {
           {expandedSections.summary && (
             <View style={styles.sectionContent}>
               <Text style={[styles.summaryText, { color: themeColors.text }]}>
-                {analysis?.summary ?? analysis?.analysisJson?.summary ?? ""}
+                {analysis?.summary}
               </Text>
             </View>
           )}
@@ -241,9 +355,11 @@ export default function ResultsScreen() {
 
           {expandedSections.insights && (
             <View style={styles.sectionContent}>
-              {(analysis?.insights ?? []).map((insight: any, index: number) => (
-                <InsightCard key={index} insight={insight} isDark={isDark} />
-              ))}
+              {(analysis?.analysisJson?.insights ?? []).map(
+                (insight: any, index: number) => (
+                  <InsightCard key={index} insight={insight} isDark={isDark} />
+                )
+              )}
             </View>
           )}
         </View>
@@ -271,9 +387,55 @@ export default function ResultsScreen() {
 
           {expandedSections.trends && (
             <View style={styles.sectionContent}>
-              {(analysis?.trends ?? []).map((trend: any, index: number) => (
-                <TrendCard key={index} trend={trend} isDark={isDark} />
-              ))}
+              {(analysis?.analysisJson?.trends ?? []).map(
+                (trend: any, index: number) => (
+                  <TrendCard key={index} trend={trend} isDark={isDark} />
+                )
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* ANOMALIES Section */}
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.cardBackground },
+          ]}
+        >
+          <Pressable
+            style={styles.sectionHeader}
+            onPress={() => toggleSection("anomalies")}
+          >
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              Anomalies
+            </Text>
+            {expandedSections.anomalies ? (
+              <ChevronUp size={20} color={themeColors.text} />
+            ) : (
+              <ChevronDown size={20} color={themeColors.text} />
+            )}
+          </Pressable>
+
+          {expandedSections.anomalies && (
+            <View style={styles.sectionContent}>
+              {(analysis?.analysisJson?.anomalies ?? []).map(
+                (anomaly: any, index: number) => (
+                  <Text
+                    key={`anomaly-${index}`}
+                    style={[
+                      styles.forecastText,
+                      {
+                        color: themeColors.text,
+                        display: "flex",
+                        alignItems: "center",
+                      },
+                    ]}
+                  >
+                    <Dot /> {anomaly}
+                  </Text>
+                )
+              )}
             </View>
           )}
         </View>
@@ -302,7 +464,7 @@ export default function ResultsScreen() {
           {expandedSections.forecast && (
             <View style={styles.sectionContent}>
               <Text style={[styles.forecastText, { color: themeColors.text }]}>
-                {analysis?.forecast}
+                {analysis?.analysisJson?.forecast}
               </Text>
             </View>
           )}
@@ -310,9 +472,9 @@ export default function ResultsScreen() {
 
         <View style={styles.actionsContainer}>
           <Button
-            icon={<Download size={20} color="#FFFFFF" />}
-            title="Export PDF"
-            onPress={handleExport}
+            icon={<RefreshCcw size={20} color="#FFFFFF" />}
+            title="Reanalyze"
+            onPress={handleReAnalyze}
             style={{ flex: 1, marginRight: 8 }}
           />
 
@@ -356,8 +518,30 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  audioButton: {
+  trashButton: {
     padding: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalContent: {
+    width: "90%",
+    maxWidth: 480,
+    padding: 16,
+    borderRadius: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
   content: {
     flex: 1,
@@ -375,7 +559,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   imageContainer: {
-    height: 200,
+    height: 300,
     borderRadius: 12,
     overflow: "hidden",
     marginBottom: 24,

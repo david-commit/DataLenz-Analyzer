@@ -17,13 +17,13 @@ import { StatusBar } from "expo-status-bar";
 import { router, useLocalSearchParams } from "expo-router";
 import {
   ArrowLeft,
-  ChevronDown,
-  ChevronUp,
+  Sparkles,
   CircleHelp as HelpCircle,
 } from "lucide-react-native";
 import colors from "@/constants/colors";
 import { authService } from "@/services/auth";
 import { saveNavigationData } from "@/utils/navigationStore";
+import { analyzeRecord } from "@/api/analyze";
 import { nanoid } from "nanoid/non-secure";
 import { useAppContext } from "@/contexts/AppContext";
 
@@ -55,12 +55,22 @@ export default function ContextInputScreen() {
       const blob = await blobResp.blob();
 
       const form = new FormData();
-      // @ts-ignore - React Native FormData accepts { uri, name, type }
-      form.append("file", {
-        uri,
-        name: `upload-${Date.now()}.jpg`,
-        type: blob.type || "image/jpeg",
-      } as any);
+      const filename = `upload-${Date.now()}.jpg`;
+      if (Platform.OS === "web") {
+        // On web, append a real File so multer on the backend receives proper file metadata
+        const file = new File([blob], filename, {
+          type: blob.type || "image/jpeg",
+        });
+        form.append("file", file, filename);
+      } else {
+        // React Native (Expo) FormData accepts { uri, name, type }
+        // @ts-ignore - React Native FormData accepts { uri, name, type }
+        form.append("file", {
+          uri,
+          name: filename,
+          type: blob.type || "image/jpeg",
+        } as any);
+      }
 
       const token = await authService.getValidToken();
       const user = await authService.getCurrentUser();
@@ -72,7 +82,7 @@ export default function ContextInputScreen() {
           "Authorization": token ? `Bearer ${token}` : "",
           "x-user-id": user?.localId || "",
         },
-        body: form as any,
+        body: form,
       });
 
       if (!res.ok) {
@@ -115,15 +125,18 @@ export default function ContextInputScreen() {
         public: true,
       } as any;
 
-      const res = await fetch(`${backendUrl.replace(/\/$/, "")}/create-record`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": token ? `Bearer ${token}` : "",
-          "x-user-id": user?.localId || "",
-        },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `${backendUrl.replace(/\/$/, "")}/create-record`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": token ? `Bearer ${token}` : "",
+            "x-user-id": user?.localId || "",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (!res.ok) {
         const txt = await res.text();
@@ -132,9 +145,14 @@ export default function ContextInputScreen() {
 
       const created = await res.json();
 
+      // Analyzes and updates db
+      const analyzedRecord = await analyzeRecord(created);
+
+      console.log("[handleUsePhoto] analyzedRecord:", analyzedRecord);
+
       // save created record and navigate to results
       const key = `analysis:${nanoid()}`;
-      saveNavigationData(key, created);
+      saveNavigationData(key, analyzedRecord);
       router.push({ pathname: "/results", params: { dataKey: key } });
     } catch (err: any) {
       console.error("handleUsePhoto error", err);
@@ -243,7 +261,9 @@ export default function ContextInputScreen() {
                 {processing || uploading ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.analyzeButtonText}>Use Photo</Text>
+                  <Text style={styles.analyzeButtonText}>
+                    <Sparkles className="h-6 w-6" /> Analyze
+                  </Text>
                 )}
               </Pressable>
             </View>
@@ -384,5 +404,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 16,
     fontWeight: "600",
+    display: "flex",
+    alignItems: "center",
   },
 });

@@ -16,16 +16,14 @@ export default function RootLayout() {
     useEffect(() => {
       if (isLoading) return;
 
-      if (!isAuthenticated) {
-        // avoid unnecessary replace when already on /auth in web
-        const currentPath =
-          typeof window !== "undefined" ? window.location.pathname : "";
-        if (!currentPath.startsWith("/auth")) {
-          router.replace("/auth");
-        }
-      } else {
-        // if not authenticated, redirect to home (which will handle login)
-        router.replace("/");
+      // If authenticated, allow current path (do nothing)
+      if (isAuthenticated) return;
+
+      // Not authenticated: avoid unnecessary replace when already on /auth in web
+      const currentPath =
+        typeof window !== "undefined" ? window.location.pathname : "";
+      if (!currentPath.startsWith("/auth")) {
+        router.replace("/auth");
       }
     }, [isAuthenticated, isLoading, router]);
 
