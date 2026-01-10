@@ -9,6 +9,7 @@ interface AppContextType {
   companyName: string;
   developerWebsite: string;
   supportEmail: string;
+  appName: string;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -24,6 +25,7 @@ export function AppProvider({ children }: AppProviderProps) {
     companyName: process.env.EXPO_PUBLIC_COMPANY_NAME || "Datalens Ltd.",
     developerWebsite: process.env.EXPO_PUBLIC_DEVELOPER_WEBSITE || "datalens.com",
     supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL || "executiveanalyticsai@gmail.com",
+    appName: process.env.EXPO_PUBLIC_APP_NAME || "DataLens Analyzer",
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

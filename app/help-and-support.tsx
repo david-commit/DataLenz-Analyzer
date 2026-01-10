@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import { useRouter } from "expo-router";
+import { ChevronLeft } from "lucide-react-native";
 import colors from "@/constants/colors";
 import { useAppContext } from "@/contexts/AppContext";
 
@@ -17,6 +19,7 @@ export default function HelpSupportScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const themeColors = isDark ? colors.dark : colors.light;
+  const router = useRouter();
 
   const { supportEmail, developerWebsite } = useAppContext();
 
@@ -28,11 +31,29 @@ export default function HelpSupportScreen() {
     }
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
       <StatusBar style={isDark ? "light" : "dark"} />
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={handleBack}
+          style={({ pressed }) => [
+            styles.backButton,
+            { opacity: pressed ? 0.7 : 1 },
+          ]}
+        >
+          <ChevronLeft size={24} color={themeColors.primary} />
+          <Text style={[styles.backText, { color: themeColors.primary }]}>
+            Profile
+          </Text>
+        </Pressable>
+      </View>
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
@@ -145,4 +166,20 @@ const styles = StyleSheet.create({
   question: { fontSize: 14, fontWeight: "600", marginTop: 8 },
   answer: { fontSize: 14, marginTop: 4 },
   link: { fontSize: 14, marginTop: 8 },
+  topBar: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backText: {
+    fontSize: 18,
+    fontWeight: "400",
+    marginTop: -4,
+  },
 });
