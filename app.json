@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "DataLens Analyzer",
-    "slug": "datalens-analyzer",
+    "slug": "datalens-analyser",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -21,14 +21,18 @@
         "backgroundColor": "#1a1a2e"
       },
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.datalens.analyzer"
+      "bundleIdentifier": "com.datalens.analyzer",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "web": {
       "bundler": "metro",
@@ -57,8 +61,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
-      }
-    }
+        "projectId": "ff239d3c-5a2b-4c20-88d8-99b5dd3dbbc3"
+      },
+      "router": {}
+    },
+    "owner": "qunanis-organization"
   }
 }

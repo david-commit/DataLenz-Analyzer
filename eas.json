@@ -9,17 +9,47 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDfX2lrYxpX-Zia23eL4PsORrdg990K4QE",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "datalens-6030b.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "datalens-6030b",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "datalens-6030b.appspot.com",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "935740982664",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:935740982664:web:d100605a35bde71c1c663d",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "935740982664-q4a4jmkcks0srm99peu8j0a50366ukk3.apps.googleusercontent.com",
+        "EXPO_PUBLIC_BACKEND_URL": "https://api.datalenslab.tech/api"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDfX2lrYxpX-Zia23eL4PsORrdg990K4QE",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "datalens-6030b.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "datalens-6030b",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "datalens-6030b.appspot.com",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "935740982664",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:935740982664:web:d100605a35bde71c1c663d",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "935740982664-q4a4jmkcks0srm99peu8j0a50366ukk3.apps.googleusercontent.com",
+        "EXPO_PUBLIC_BACKEND_URL": "https://api.datalenslab.tech/api"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDfX2lrYxpX-Zia23eL4PsORrdg990K4QE",
+        "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "datalens-6030b.firebaseapp.com",
+        "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "datalens-6030b",
+        "EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET": "datalens-6030b.appspot.com",
+        "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "935740982664",
+        "EXPO_PUBLIC_FIREBASE_APP_ID": "1:935740982664:web:d100605a35bde71c1c663d",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "935740982664-q4a4jmkcks0srm99peu8j0a50366ukk3.apps.googleusercontent.com",
+        "EXPO_PUBLIC_BACKEND_URL": "https://api.datalenslab.tech/api"
       }
     }
   },
