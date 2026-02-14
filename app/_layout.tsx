@@ -1,5 +1,5 @@
 import React, { useEffect, ReactNode } from "react";
-import { Stack, useRouter, usePathname } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useFrameworkReady } from "@/hooks/useFrameworkReady";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -12,7 +12,6 @@ export default function RootLayout() {
   function AuthGate({ children }: { children: ReactNode }) {
     const { isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
-    const pathname = usePathname();
 
     useEffect(() => {
       if (isLoading) return;
@@ -20,11 +19,13 @@ export default function RootLayout() {
       // If authenticated, allow current path (do nothing)
       if (isAuthenticated) return;
 
-      // Not authenticated: avoid unnecessary replace when already on /auth
-      if (!pathname.startsWith("/auth")) {
+      // Not authenticated: avoid unnecessary replace when already on /auth in web
+      const currentPath =
+        typeof window !== "undefined" ? window.location.pathname : "";
+      if (!currentPath.startsWith("/auth")) {
         router.replace("/auth");
       }
-    }, [isAuthenticated, isLoading, router, pathname]);
+    }, [isAuthenticated, isLoading, router]);
 
     if (isLoading) {
       // while auth is initializing, render spinner

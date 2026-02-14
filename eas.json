@@ -18,7 +18,7 @@
         "EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "935740982664",
         "EXPO_PUBLIC_FIREBASE_APP_ID": "1:935740982664:web:d100605a35bde71c1c663d",
         "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "935740982664-q4a4jmkcks0srm99peu8j0a50366ukk3.apps.googleusercontent.com",
-        "EXPO_PUBLIC_BACKEND_URL": "https://api.datalenslab.tech/api"
+        "EXPO_PUBLIC_BACKEND_URL": "http://localhost:8000/api"
       }
     },
     "preview": {
