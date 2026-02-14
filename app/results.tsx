@@ -1,83 +1,199 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, useColorScheme, Image, ActivityIndicator, Share, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { StatusBar } from 'expo-status-bar';
-import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, ChevronDown, ChevronUp, Download, Share2, Volume2, VolumeX } from 'lucide-react-native';
-import colors from '@/constants/colors';
-import { generateMockAnalysis } from '@/utils/mockData';
-import InsightCard from '@/components/InsightCard';
-import TrendCard from '@/components/TrendCard';
-import Button from '@/components/Button';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  useColorScheme,
+  Image,
+  ActivityIndicator,
+  Share,
+  Platform,
+  Modal,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { router, useLocalSearchParams } from "expo-router";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  Dot,
+  Trash2,
+  RefreshCcw,
+  Share2,
+} from "lucide-react-native";
+import colors from "@/constants/colors";
+import InsightCard from "@/components/InsightCard";
+import TrendCard from "@/components/TrendCard";
+import {
+  getNavigationData,
+  deleteNavigationData,
+  saveNavigationData,
+  emit as emitNavigation,
+} from "@/utils/navigationStore";
+import Button from "@/components/Button";
+import { analyzeRecord } from "@/api/analyze";
+import { nanoid } from "nanoid/non-secure";
+import { deleteRecord as deleteRecordApi } from "@/api/analysisRecords";
 
 export default function ResultsScreen() {
-  const params = useLocalSearchParams<{ 
+  const params = useLocalSearchParams<{
     imageUri: string;
     graphTitle: string;
     graphType: string;
     dataContext: string;
   }>();
-  
+
   const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const isDark = colorScheme === "dark";
   const themeColors = isDark ? colors.dark : colors.light;
-  
+
   const [expanded, setExpanded] = useState(true);
-  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({
+  const [expandedSections, setExpandedSections] = useState<{
+    [key: string]: boolean;
+  }>({
     summary: true,
     insights: true,
     trends: true,
-    forecast: true
+    anomalies: true,
+    forecast: true,
   });
-  const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [analysis, setAnalysis] = useState<any>(null);
-  
-  useEffect(() => {
-    // Simulate API call to generate analysis
-    setTimeout(() => {
-      setAnalysis(generateMockAnalysis(params.graphTitle || 'Untitled Graph'));
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleReAnalyze = async () => {
+    if (!analysis?.id) return;
+    try {
+      setIsLoading(true);
+
+      const reAnalysis = await analyzeRecord(analysis);
+
+      if (!reAnalysis) {
+        throw new Error("Re-analysis failed");
+      }
+      // Normalize shape: prefer aiResult.analysisJson and aiResult.summary when present
+      const normalized = {
+        ...analysis,
+        ...reAnalysis,
+        analysisJson:
+          reAnalysis?.aiResult?.analysisJson ??
+          reAnalysis?.analysisJson ??
+          analysis?.analysisJson ??
+          null,
+        summary:
+          reAnalysis?.aiResult?.summary ??
+          reAnalysis?.summary ??
+          analysis?.summary ??
+          null,
+      } as any;
+
+      // Update local state with normalized object
+      setAnalysis(normalized);
+
+      // Update transient navigation store: overwrite existing key if present, else create a snapshot key
+      const dataKey = (params as any).dataKey as string | undefined;
+      if (dataKey) {
+        saveNavigationData(dataKey, normalized);
+      } else {
+        const key = `analysis:${nanoid()}`;
+        saveNavigationData(key, normalized);
+      }
+
+      // Notify listeners (e.g., History screen) that an analysis was updated
+      try {
+        emitNavigation("analysis:updated", normalized);
+      } catch (err) {
+        console.warn("Failed to emit analysis update", err);
+      }
+      return;
+    } catch (err) {
+      console.error("Re-analyze error", err);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    // If a dataKey param was passed, read the transient analysis object
+    const dataKey = (params as any).dataKey as string | undefined;
+
+    if (dataKey) {
+      const obj = getNavigationData(dataKey);
+      if (obj) {
+        setAnalysis(obj);
+        // optionally delete to free memory
+        deleteNavigationData(dataKey);
+        setIsLoading(false);
+        return;
+      }
+    }
   }, []);
-  
+
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
-  
-  const toggleAudio = () => {
-    setIsPlaying(!isPlaying);
-    // In a real app, this would start/stop text-to-speech
+
+  const handleDeletePress = () => {
+    setShowDeleteConfirm(true);
   };
-  
-  const handleExport = () => {
-    // In a real app, this would generate and save a PDF
-    alert('Analysis would be exported as PDF');
+
+  const confirmDelete = async () => {
+    if (!analysis?.id) return;
+    try {
+      setDeleting(true);
+      await deleteRecordApi(analysis.id);
+      // when deleting an analysis and you stored it under dataKey
+      const dataKey = (params as any).dataKey as string | undefined;
+      if (dataKey) {
+        deleteNavigationData(dataKey);
+      }
+      // then navigate away
+      router.replace("/history");
+    } catch (err) {
+      console.error("Delete failed", err);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
-  
+
+  const cancelDelete = () => setShowDeleteConfirm(false);
+
   const handleShare = async () => {
-    if (Platform.OS === 'web') {
-      alert('Sharing is not available in web preview');
+    if (Platform.OS === "web") {
+      alert("Sharing is not available in web preview");
       return;
     }
-    
+
     try {
       await Share.share({
-        title: params.graphTitle || 'DataLens Analysis',
-        message: 'Check out this data analysis from DataLens Analyzer!'
+        title: params.graphTitle || "DataLens Analysis",
+        message: "Check out this data analysis from DataLens Analyzer!",
       });
     } catch (error) {
       console.error(error);
     }
   };
-  
+
   if (isLoading) {
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 10000);
     return (
-      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: themeColors.background }]}>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
+      <SafeAreaView
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: themeColors.background },
+        ]}
+      >
+        <StatusBar style={isDark ? "light" : "dark"} />
         <ActivityIndicator size="large" color={themeColors.primary} />
         <Text style={[styles.loadingText, { color: themeColors.text }]}>
           Analyzing your graph...
@@ -85,68 +201,145 @@ export default function ResultsScreen() {
       </SafeAreaView>
     );
   }
-  
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-      
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+    >
+      <StatusBar style={isDark ? "light" : "dark"} />
+
       <View style={styles.header}>
-        <Pressable 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <Pressable style={styles.backButton} onPress={() => router.back()}>
           <ArrowLeft size={24} color={themeColors.text} />
         </Pressable>
-        <Text style={[styles.title, { color: themeColors.text }]}>Analysis Results</Text>
-        <Pressable 
-          style={styles.audioButton}
-          onPress={toggleAudio}
-        >
-          {isPlaying ? (
-            <VolumeX size={24} color={themeColors.text} />
-          ) : (
-            <Volume2 size={24} color={themeColors.text} />
-          )}
+        <Text style={[styles.title, { color: themeColors.text }]}>
+          Analysis Results
+        </Text>
+        <Pressable style={styles.trashButton} onPress={handleDeletePress}>
+          <Trash2 size={24} color={"#E53935"} />
         </Pressable>
       </View>
-      
-      <ScrollView 
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+
+      <Modal visible={showDeleteConfirm} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: themeColors.cardBackground },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: themeColors.text }]}>
+              Confirm delete
+            </Text>
+            <Text
+              style={{ color: themeColors.textSecondary, marginBottom: 12 }}
+            >
+              Are you sure you want to delete this analysis? This action cannot
+              be undone.
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "flex-end",
+                gap: 8,
+              }}
+            >
+              <Pressable
+                onPress={cancelDelete}
+                style={[styles.modalButton, { backgroundColor: "#E0E0E0" }]}
+              >
+                <Text>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={confirmDelete}
+                style={[styles.modalButton, { backgroundColor: "#E53935" }]}
+              >
+                {deleting ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={{ color: "#FFFFFF" }}>Delete</Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/** Prefer values from the full analysis object when available */}
         <View style={styles.graphInfoContainer}>
           <Text style={[styles.graphTitle, { color: themeColors.text }]}>
-            {params.graphTitle || 'Untitled Graph'}
+            {analysis?.analysisJson?.title || "Untitled Graph"}
           </Text>
-          {params.graphType ? (
-            <Text style={[styles.graphType, { color: themeColors.textSecondary }]}>
-              {params.graphType}
-            </Text>
-          ) : null}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              marginTop: 10,
+            }}
+          >
+            {/* Analaysis CHART TYPE */}
+            {analysis?.analysisJson?.chart_type ||
+            analysis?.type ||
+            params.graphType ? (
+              <Text
+                style={[
+                  styles.graphType,
+                  {
+                    color: themeColors.textSecondary,
+                    textTransform: "capitalize",
+                  },
+                ]}
+              >
+                Chart Type:{" "}
+                {analysis?.analysisJson?.chart_type ||
+                  analysis?.type ||
+                  params.graphType}
+              </Text>
+            ) : null}
+            {/* Analaysis ID */}
+            {analysis?.id ? (
+              <Text
+                style={[styles.graphType, { color: themeColors.textSecondary }]}
+              >
+                Analysis ID: {analysis?.id}
+              </Text>
+            ) : null}
+          </View>
         </View>
-        
+
+        {/* Image Container */}
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: params.imageUri }}
+            source={{
+              uri: analysis?.imageUrl,
+            }}
             style={styles.graphImage}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         </View>
-        
+
         {/* Summary Section */}
-        <View style={[styles.section, { backgroundColor: themeColors.cardBackground }]}>
-          <Pressable 
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.cardBackground },
+          ]}
+        >
+          <Pressable
             style={styles.sectionHeader}
-            onPress={() => toggleSection('summary')}
+            onPress={() => toggleSection("summary")}
           >
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Executive Summary</Text>
-            {expandedSections.summary ? (
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              Executive Summary
+            </Text>
+            {expanded ? (
               <ChevronUp size={20} color={themeColors.text} />
             ) : (
               <ChevronDown size={20} color={themeColors.text} />
             )}
           </Pressable>
-          
+
           {expandedSections.summary && (
             <View style={styles.sectionContent}>
               <Text style={[styles.summaryText, { color: themeColors.text }]}>
@@ -155,92 +348,153 @@ export default function ResultsScreen() {
             </View>
           )}
         </View>
-        
+
         {/* Key Insights Section */}
-        <View style={[styles.section, { backgroundColor: themeColors.cardBackground }]}>
-          <Pressable 
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.cardBackground },
+          ]}
+        >
+          <Pressable
             style={styles.sectionHeader}
-            onPress={() => toggleSection('insights')}
+            onPress={() => toggleSection("insights")}
           >
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Key Insights</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              Key Insights
+            </Text>
             {expandedSections.insights ? (
               <ChevronUp size={20} color={themeColors.text} />
             ) : (
               <ChevronDown size={20} color={themeColors.text} />
             )}
           </Pressable>
-          
+
           {expandedSections.insights && (
             <View style={styles.sectionContent}>
-              {analysis?.insights.map((insight: any, index: number) => (
-                <InsightCard 
-                  key={index}
-                  insight={insight}
-                  isDark={isDark}
-                />
-              ))}
+              {(analysis?.analysisJson?.insights ?? []).map(
+                (insight: any, index: number) => (
+                  <InsightCard key={index} insight={insight} isDark={isDark} />
+                )
+              )}
             </View>
           )}
         </View>
-        
+
         {/* Trends Section */}
-        <View style={[styles.section, { backgroundColor: themeColors.cardBackground }]}>
-          <Pressable 
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.cardBackground },
+          ]}
+        >
+          <Pressable
             style={styles.sectionHeader}
-            onPress={() => toggleSection('trends')}
+            onPress={() => toggleSection("trends")}
           >
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Trends</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              Trends
+            </Text>
             {expandedSections.trends ? (
               <ChevronUp size={20} color={themeColors.text} />
             ) : (
               <ChevronDown size={20} color={themeColors.text} />
             )}
           </Pressable>
-          
+
           {expandedSections.trends && (
             <View style={styles.sectionContent}>
-              {analysis?.trends.map((trend: any, index: number) => (
-                <TrendCard 
-                  key={index}
-                  trend={trend}
-                  isDark={isDark}
-                />
-              ))}
+              {(analysis?.analysisJson?.trends ?? []).map(
+                (trend: any, index: number) => (
+                  <TrendCard key={index} trend={trend} isDark={isDark} />
+                )
+              )}
             </View>
           )}
         </View>
-        
-        {/* Forecast Section */}
-        <View style={[styles.section, { backgroundColor: themeColors.cardBackground }]}>
-          <Pressable 
+
+        {/* ANOMALIES Section */}
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.cardBackground },
+          ]}
+        >
+          <Pressable
             style={styles.sectionHeader}
-            onPress={() => toggleSection('forecast')}
+            onPress={() => toggleSection("anomalies")}
           >
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Forecast</Text>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              Anomalies
+            </Text>
+            {expandedSections.anomalies ? (
+              <ChevronUp size={20} color={themeColors.text} />
+            ) : (
+              <ChevronDown size={20} color={themeColors.text} />
+            )}
+          </Pressable>
+
+          {expandedSections.anomalies && (
+            <View style={styles.sectionContent}>
+              {(analysis?.analysisJson?.anomalies ?? []).map(
+                (anomaly: any, index: number) => (
+                  <Text
+                    key={`anomaly-${index}`}
+                    style={[
+                      styles.forecastText,
+                      {
+                        color: themeColors.text,
+                        display: "flex",
+                        alignItems: "center",
+                      },
+                    ]}
+                  >
+                    <Dot /> {anomaly}
+                  </Text>
+                )
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Forecast Section */}
+        <View
+          style={[
+            styles.section,
+            { backgroundColor: themeColors.cardBackground },
+          ]}
+        >
+          <Pressable
+            style={styles.sectionHeader}
+            onPress={() => toggleSection("forecast")}
+          >
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+              Forecast
+            </Text>
             {expandedSections.forecast ? (
               <ChevronUp size={20} color={themeColors.text} />
             ) : (
               <ChevronDown size={20} color={themeColors.text} />
             )}
           </Pressable>
-          
+
           {expandedSections.forecast && (
             <View style={styles.sectionContent}>
               <Text style={[styles.forecastText, { color: themeColors.text }]}>
-                {analysis?.forecast}
+                {analysis?.analysisJson?.forecast}
               </Text>
             </View>
           )}
         </View>
-        
+
         <View style={styles.actionsContainer}>
           <Button
-            icon={<Download size={20} color="#FFFFFF" />}
-            title="Export PDF"
-            onPress={handleExport}
+            icon={<RefreshCcw size={20} color="#FFFFFF" />}
+            title="Reanalyze"
+            onPress={() => handleReAnalyze()}
             style={{ flex: 1, marginRight: 8 }}
           />
-          
+
           <Button
             icon={<Share2 size={20} color="#FFFFFF" />}
             title="Share"
@@ -260,17 +514,17 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -279,10 +533,32 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
-  audioButton: {
+  trashButton: {
     padding: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  modalContent: {
+    width: "90%",
+    maxWidth: 480,
+    padding: 16,
+    borderRadius: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  modalButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
   },
   content: {
     flex: 1,
@@ -293,36 +569,36 @@ const styles = StyleSheet.create({
   },
   graphTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   graphType: {
     fontSize: 16,
     marginTop: 4,
   },
   imageContainer: {
-    height: 200,
+    height: 300,
     borderRadius: 12,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 24,
   },
   graphImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   section: {
     borderRadius: 12,
     marginBottom: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   sectionContent: {
     padding: 16,
@@ -337,7 +613,7 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   actionsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginTop: 8,
     marginBottom: 32,
   },
