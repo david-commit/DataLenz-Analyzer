@@ -1,16 +1,19 @@
-import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Pressable, Text, Platform } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { RefreshCw } from 'lucide-react-native';
+import React, { useState, useRef } from "react";
+import { View, StyleSheet, Pressable, Text, Platform } from "react-native";
+import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
+import { RefreshCw } from "lucide-react-native";
 
 interface CameraComponentProps {
   onCapture: (uri: string) => void;
   cameraRef: React.RefObject<any>;
 }
 
-export default function CameraComponent({ onCapture, cameraRef }: CameraComponentProps) {
+export default function CameraComponent({
+  onCapture,
+  cameraRef,
+}: CameraComponentProps) {
   const [permission, requestPermission] = useCameraPermissions();
-  const [cameraType, setCameraType] = useState<CameraType>('back');
+  const [cameraType, setCameraType] = useState<CameraType>("back");
 
   if (!permission) {
     // Camera permissions are still loading
@@ -25,7 +28,9 @@ export default function CameraComponent({ onCapture, cameraRef }: CameraComponen
     // Camera permissions are not granted yet
     return (
       <View style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>We need your permission to use the camera</Text>
+        <Text style={styles.permissionText}>
+          We need your permission to use the camera
+        </Text>
         <Pressable style={styles.permissionButton} onPress={requestPermission}>
           <Text style={styles.permissionButtonText}>Grant Permission</Text>
         </Pressable>
@@ -36,20 +41,22 @@ export default function CameraComponent({ onCapture, cameraRef }: CameraComponen
   const handleCapture = async () => {
     if (cameraRef.current) {
       try {
-        const photo = await cameraRef.current.takePictureAsync();
+        const photo = await cameraRef.current.takePictureAsync({
+          shutterSound: false,
+        });
         onCapture(photo.uri);
       } catch (error) {
-        console.error('Failed to take picture', error);
+        console.error("Failed to take picture", error);
       }
     }
   };
 
   const toggleCameraType = () => {
-    setCameraType(current => (current === 'back' ? 'front' : 'back'));
+    setCameraType((current) => (current === "back" ? "front" : "back"));
   };
 
   // On web, return a placeholder since camera is not supported
-  if (Platform.OS === 'web') {
+  if (Platform.OS === "web") {
     return (
       <View style={styles.webPlaceholder}>
         <Text style={styles.webPlaceholderText}>
@@ -81,13 +88,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     borderRadius: 16,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   camera: {
     flex: 1,
   },
   controls: {
-    position: 'absolute',
+    position: "absolute",
     top: 16,
     right: 16,
     zIndex: 10,
@@ -96,38 +103,38 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   permissionContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   permissionText: {
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 16,
   },
   permissionButton: {
-    backgroundColor: '#1E88E5',
+    backgroundColor: "#1E88E5",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
   },
   permissionButtonText: {
-    color: 'white',
-    fontWeight: '600',
+    color: "white",
+    fontWeight: "600",
   },
   webPlaceholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
   },
   webPlaceholderText: {
-    textAlign: 'center',
-    color: '#666',
+    textAlign: "center",
+    color: "#666",
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,9 @@ import {
   ScrollView,
   Pressable,
   useColorScheme,
+  ActivityIndicator,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import { FileSliders as Sliders, Search, Camera } from "lucide-react-native";
@@ -22,6 +24,11 @@ import {
 import colors from "@/constants/colors";
 import { router } from "expo-router";
 
+const HISTORY_CACHE_KEY = "history_cache";
+const CACHE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+
+type FilterType = "all" | "bar" | "line" | "pie";
+
 export default function HistoryScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
@@ -30,32 +37,63 @@ export default function HistoryScreen() {
   const [analyses, setAnalyses] = useState<AnalysisType[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+
+  const mapRecords = useCallback((payload: any[]): AnalysisType[] => {
+    return (payload || []).map((rec: any) => ({
+      id: rec.id,
+      userId: rec.userId,
+      imageUrl: rec.imageUrl,
+      summary: String(rec.aiResult?.summary || ""),
+      analysisJson: rec.aiResult?.analysisJson || {},
+      public: rec.public ?? false,
+      date: rec.createdAt || rec.date || new Date().toISOString(),
+    }));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
 
     async function load() {
       try {
+        // Try to load from cache first
+        const cached = await AsyncStorage.getItem(HISTORY_CACHE_KEY);
+        if (cached) {
+          const { data, timestamp } = JSON.parse(cached);
+          const isExpired = Date.now() - timestamp > CACHE_EXPIRY_MS;
+          if (!isExpired && mounted) {
+            setAnalyses(data);
+            setIsLoading(false);
+            // Still fetch in background to update cache
+          } else if (mounted) {
+            setAnalyses(data); // Show stale data while fetching
+          }
+        }
+
         const user = await authService.getCurrentUser();
         const token = await authService.getValidToken();
-        if (!user || !token) return;
+        if (!user || !token) {
+          if (mounted) setIsLoading(false);
+          return;
+        }
 
         const payload = await getRecords();
+        const mapped = mapRecords(payload);
 
-        // expected payload: array of records with id, userId, imageUrl, aiResult.analysisJson, public, createdAt
-        const mapped: AnalysisType[] = (payload || []).map((rec: any) => ({
-          id: rec.id,
-          userId: rec.userId,
-          imageUrl: rec.imageUrl,
-          summary: String(rec.aiResult?.summary || ""),
-          analysisJson: rec.aiResult?.analysisJson || {},
-          public: rec.public ?? false,
-          date: rec.createdAt || rec.date || new Date().toISOString(),
-        }));
+        // Update cache
+        await AsyncStorage.setItem(
+          HISTORY_CACHE_KEY,
+          JSON.stringify({ data: mapped, timestamp: Date.now() })
+        );
 
-        if (mounted) setAnalyses(mapped);
+        if (mounted) {
+          setAnalyses(mapped);
+          setIsLoading(false);
+        }
       } catch (error) {
         console.error("Failed loading records", error);
+        if (mounted) setIsLoading(false);
       }
     }
 
@@ -64,7 +102,7 @@ export default function HistoryScreen() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [mapRecords]);
 
   useEffect(() => {
     // listen for analysis updates from Results screen
@@ -98,8 +136,30 @@ export default function HistoryScreen() {
     };
   }, []);
 
+  // Filter analyses based on active filter
+  const filteredAnalyses = analyses.filter((analysis) => {
+    if (activeFilter === "all") return true;
+
+    const chartType =
+      analysis.analysisJson?.chartType?.toLowerCase() ||
+      analysis.analysisJson?.chart_type?.toLowerCase() ||
+      analysis.summary?.toLowerCase() ||
+      "";
+
+    switch (activeFilter) {
+      case "bar":
+        return chartType.includes("bar");
+      case "line":
+        return chartType.includes("line");
+      case "pie":
+        return chartType.includes("pie") || chartType.includes("donut");
+      default:
+        return true;
+    }
+  });
+
   // Group analyses by date (today, yesterday, older)
-  const groupedAnalyses = analyses.reduce(
+  const groupedAnalyses = filteredAnalyses.reduce(
     (groups, analysis) => {
       const today = new Date();
       const yesterday = new Date(today);
@@ -173,20 +233,42 @@ export default function HistoryScreen() {
             <Pressable
               style={[
                 styles.filterChip,
-                { backgroundColor: themeColors.primary },
+                {
+                  backgroundColor:
+                    activeFilter === "all"
+                      ? themeColors.primary
+                      : themeColors.surfaceVariant,
+                },
               ]}
+              onPress={() => setActiveFilter("all")}
             >
-              <Text style={styles.filterChipText}>All</Text>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  activeFilter !== "all" && { color: themeColors.text },
+                ]}
+              >
+                All
+              </Text>
             </Pressable>
 
             <Pressable
               style={[
                 styles.filterChip,
-                { backgroundColor: themeColors.surfaceVariant },
+                {
+                  backgroundColor:
+                    activeFilter === "bar"
+                      ? themeColors.primary
+                      : themeColors.surfaceVariant,
+                },
               ]}
+              onPress={() => setActiveFilter("bar")}
             >
               <Text
-                style={[styles.filterChipText, { color: themeColors.text }]}
+                style={[
+                  styles.filterChipText,
+                  activeFilter !== "bar" && { color: themeColors.text },
+                ]}
               >
                 Bar Graphs
               </Text>
@@ -195,11 +277,20 @@ export default function HistoryScreen() {
             <Pressable
               style={[
                 styles.filterChip,
-                { backgroundColor: themeColors.surfaceVariant },
+                {
+                  backgroundColor:
+                    activeFilter === "line"
+                      ? themeColors.primary
+                      : themeColors.surfaceVariant,
+                },
               ]}
+              onPress={() => setActiveFilter("line")}
             >
               <Text
-                style={[styles.filterChipText, { color: themeColors.text }]}
+                style={[
+                  styles.filterChipText,
+                  activeFilter !== "line" && { color: themeColors.text },
+                ]}
               >
                 Line Charts
               </Text>
@@ -208,11 +299,20 @@ export default function HistoryScreen() {
             <Pressable
               style={[
                 styles.filterChip,
-                { backgroundColor: themeColors.surfaceVariant },
+                {
+                  backgroundColor:
+                    activeFilter === "pie"
+                      ? themeColors.primary
+                      : themeColors.surfaceVariant,
+                },
               ]}
+              onPress={() => setActiveFilter("pie")}
             >
               <Text
-                style={[styles.filterChipText, { color: themeColors.text }]}
+                style={[
+                  styles.filterChipText,
+                  activeFilter !== "pie" && { color: themeColors.text },
+                ]}
               >
                 Pie Charts
               </Text>
@@ -222,8 +322,20 @@ export default function HistoryScreen() {
       )}
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Loading state */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={themeColors.primary} />
+            <Text
+              style={[styles.loadingText, { color: themeColors.textSecondary }]}
+            >
+              Loading history...
+            </Text>
+          </View>
+        )}
+
         {/* Today's analyses */}
-        {groupedAnalyses.today.length > 0 && (
+        {!isLoading && groupedAnalyses.today.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
               Today
@@ -239,7 +351,7 @@ export default function HistoryScreen() {
         )}
 
         {/* Yesterday's analyses */}
-        {groupedAnalyses.yesterday.length > 0 && (
+        {!isLoading && groupedAnalyses.yesterday.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
               Yesterday
@@ -255,7 +367,7 @@ export default function HistoryScreen() {
         )}
 
         {/* Older analyses */}
-        {groupedAnalyses.older.length > 0 && (
+        {!isLoading && groupedAnalyses.older.length > 0 && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
               Older
@@ -271,7 +383,7 @@ export default function HistoryScreen() {
         )}
 
         {/* Empty state */}
-        {analyses.length === 0 && (
+        {!isLoading && filteredAnalyses.length === 0 && (
           <View
             style={[
               styles.emptyState,
@@ -293,7 +405,12 @@ export default function HistoryScreen() {
                 Capture and analyze graphs to build your history
               </Text>
             </View>
-            <Pressable style={styles.analyzeButton} onPress={() => {router.push('/camera')}}>
+            <Pressable
+              style={styles.analyzeButton}
+              onPress={() => {
+                router.push("/camera");
+              }}
+            >
               <Camera size={24} color="#FFFFFF" />
               <Text style={styles.analyzeButtonText}>Analyze New Graph</Text>
             </Pressable>
@@ -307,6 +424,15 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
   },
   header: {
     flexDirection: "row",
@@ -374,7 +500,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 40,
-    height: 300
+    height: 300,
   },
   emptyStateText: {
     fontSize: 18,

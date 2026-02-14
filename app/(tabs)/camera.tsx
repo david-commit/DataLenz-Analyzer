@@ -110,7 +110,9 @@ export default function CameraScreen() {
       // cameraRef is forwarded to CameraComponent -> CameraView
       const cam: any = cameraRef.current;
       if (cam && typeof cam.takePictureAsync === "function") {
-        const photo = await cam.takePictureAsync();
+        const photo = await cam.takePictureAsync({
+          shutterSound: false,
+        });
         if (photo?.uri) setCapturedImage(photo.uri);
         return;
       }
@@ -208,7 +210,9 @@ export default function CameraScreen() {
               ) : (
                 <>
                   <CameraIcon size={24} color="#FFFFFF" />
-                  <Text style={styles.analyzeButtonText}>Proceed to Analyze</Text>
+                  <Text style={styles.analyzeButtonText}>
+                    Proceed to Analyze
+                  </Text>
                 </>
               )}
             </Pressable>
