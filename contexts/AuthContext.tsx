@@ -5,12 +5,10 @@ import React, {
   useState,
   ReactNode,
 } from "react";
+import { Platform } from "react-native";
 import { authService } from "@/services/auth";
 import { User } from "@/types/auth";
-import {
-  handleGoogleSignIn,
-  handleFacebookSignIn,
-} from "@/utils/oauthHandlers";
+import { handleGoogleSignIn, useGoogleAuth } from "@/utils/oauthHandlers";
 
 interface AuthContextType {
   user: User | null;
@@ -18,7 +16,6 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
-  loginWithFacebook: () => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -32,6 +29,9 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Use the Google Auth hook for native platforms
+  const { signIn: googleSignIn } = useGoogleAuth();
 
   useEffect(() => {
     initializeAuth();
@@ -68,24 +68,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const loginWithGoogle = async () => {
     try {
-      const idToken = await handleGoogleSignIn();
+      let idToken: string | null = null;
+
+      if (Platform.OS === "web") {
+        idToken = await handleGoogleSignIn();
+      } else {
+        // Use hook-based approach for native
+        idToken = await googleSignIn();
+      }
+
       if (!idToken) {
         throw new Error("Failed to get Google ID token");
       }
       const user = await authService.loginWithGoogle(idToken);
-      setUser(user);
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  const loginWithFacebook = async () => {
-    try {
-      const accessToken = await handleFacebookSignIn();
-      if (!accessToken) {
-        throw new Error("Failed to get Facebook access token");
-      }
-      const user = await authService.loginWithFacebook(accessToken);
       setUser(user);
     } catch (error) {
       throw error;
@@ -107,7 +102,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     login,
     register,
     loginWithGoogle,
-    loginWithFacebook,
     logout,
     isAuthenticated: !!user,
   };

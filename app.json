@@ -3,6 +3,7 @@
     "name": "DataLens Analyzer",
     "slug": "datalens-analyser",
     "version": "1.0.0",
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "datalensanalyzer",
@@ -10,12 +11,14 @@
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/datalens-splash-screen.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#1a1a2e"
     },
     "android": {
       "package": "com.datalens.analyzer",
       "versionCode": 1,
+      "enableProguardInReleaseBuilds": true,
+      "enableShrinkResourcesInReleaseBuilds": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/datalens-logo-with-backdrop.png",
         "backgroundColor": "#1a1a2e"

@@ -1,16 +1,14 @@
-import { makeRedirectUri, AuthRequest } from "expo-auth-session";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
 
+// Required for web to complete auth session
+WebBrowser.maybeCompleteAuthSession();
+
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const FACEBOOK_APP_ID = process.env.EXPO_PUBLIC_FACEBOOK_APP_ID;
-
-// Authorized Domains: https://console.firebase.google.com/u/1/project/datalens-6030b/authentication/settings
-const redirectUrl = makeRedirectUri({ scheme: "myapp", path: "oauthredirect" });
-
-// Helpful debug output for redirect URI registration in Google/Facebook console
-if (typeof console !== "undefined") {
-  console.debug("[oauthHandlers] redirectUrl =", redirectUrl);
-}
+const GOOGLE_ANDROID_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 
 // Returns Google ID token (string) or null if cancelled
 export async function handleGoogleSignIn(): Promise<string | null> {
@@ -20,188 +18,110 @@ export async function handleGoogleSignIn(): Promise<string | null> {
     );
   }
 
-  const request = new AuthRequest({
-    clientId: GOOGLE_WEB_CLIENT_ID,
-    redirectUri: redirectUrl,
-    responseType: "id_token",
-    scopes: ["openid", "email", "profile"],
-    extraParams: { nonce: Math.random().toString(36).substring(2) },
-    // Implicit flow (id_token) must not use PKCE
-    usePKCE: false,
+  return new Promise((resolve, reject) => {
+    // This creates a proper OAuth request using Expo's Google provider
+    const config = {
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+      iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+      scopes: ["openid", "profile", "email"],
+    };
+
+    // For web, we use a different approach - direct OAuth
+    if (Platform.OS === "web") {
+      handleWebGoogleSignIn(config).then(resolve).catch(reject);
+    } else {
+      // For native, prompt will be handled by the component
+      reject(new Error("Use the useGoogleAuth hook for native platforms"));
+    }
   });
-
-  const discovery = {
-    authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-  } as any;
-  // On web, open popup and listen for the redirect message from `app/oauthredirect`
-  let result: any;
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    const authUrl = await request.makeAuthUrlAsync(discovery);
-
-    result = await new Promise((resolve) => {
-      const timeoutMs = 60000;
-      let resolved = false;
-
-      const onMessage = (e: MessageEvent) => {
-        try {
-          if (!e?.data) return;
-          const url =
-            e.data?.url || (typeof e.data === "string" ? e.data : null);
-          if (!url) return;
-          console.debug("[oauthHandlers] received popup message", e.data);
-          const parsed = request.parseReturnUrl(url);
-          resolved = true;
-          window.removeEventListener("message", onMessage);
-          try {
-            popup?.close();
-          } catch (err) {}
-          resolve(parsed);
-        } catch (err) {
-          resolved = true;
-          window.removeEventListener("message", onMessage);
-          try {
-            popup?.close();
-          } catch (err) {}
-          resolve({ type: "error", error: err });
-        }
-      };
-
-      window.addEventListener("message", onMessage);
-
-      const popup = window.open(authUrl, "_blank", "width=500,height=700");
-
-      const checkInterval = setInterval(() => {
-        try {
-          const isClosed = popup == null || popup.closed;
-          if (isClosed) {
-            clearInterval(checkInterval);
-            if (!resolved) {
-              window.removeEventListener("message", onMessage);
-              resolve({ type: "dismiss" });
-            }
-          }
-        } catch (e) {
-          // Cross-origin opener policy may throw when accessing popup.closed
-          // Treat as still open and continue; the message listener will resolve when message arrives.
-        }
-      }, 500);
-
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        if (!resolved) {
-          window.removeEventListener("message", onMessage);
-          try {
-            popup?.close();
-          } catch (err) {}
-          resolve({ type: "dismiss" });
-        }
-      }, timeoutMs);
-    });
-  } else {
-    // Native (Expo Go / device) - use the library prompt which opens native/web browser
-    result = await request.promptAsync(discovery);
-  }
-
-  if (result.type === "success" && result.params) {
-    console.log(result);
-    const idToken = (result.params.id_token as string) || null;
-
-    return idToken;
-  }
-
-  if (result.type === "dismiss" || result.type === "cancel") return null;
-
-  throw new Error("Google Sign-In failed");
 }
 
-// Returns Facebook access token (string) or null if cancelled
-export async function handleFacebookSignIn(): Promise<string | null> {
-  if (!FACEBOOK_APP_ID) {
-    throw new Error(
-      "Facebook Sign-In setup requires configuration. Please set EXPO_PUBLIC_FACEBOOK_APP_ID in your environment."
-    );
-  }
+// Web-specific Google Sign-In using popup
+async function handleWebGoogleSignIn(config: {
+  webClientId: string;
+  scopes: string[];
+}): Promise<string | null> {
+  const redirectUri = `${window.location.origin}/oauthredirect`;
 
-  const request = new AuthRequest({
-    clientId: FACEBOOK_APP_ID,
-    redirectUri: redirectUrl,
-    responseType: "token",
-    scopes: ["email", "public_profile"],
-    // Implicit flow (token) must not use PKCE
-    usePKCE: false,
+  const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  authUrl.searchParams.set("client_id", config.webClientId);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("response_type", "id_token");
+  authUrl.searchParams.set("scope", config.scopes.join(" "));
+  authUrl.searchParams.set("nonce", Math.random().toString(36).substring(2));
+  authUrl.searchParams.set("prompt", "select_account");
+
+  return new Promise((resolve) => {
+    const popup = window.open(
+      authUrl.toString(),
+      "_blank",
+      "width=500,height=700"
+    );
+
+    const onMessage = (e: MessageEvent) => {
+      try {
+        if (!e?.data) return;
+        const url = e.data?.url || (typeof e.data === "string" ? e.data : null);
+        if (!url || !url.includes("id_token")) return;
+
+        window.removeEventListener("message", onMessage);
+        popup?.close();
+
+        // Extract id_token from URL fragment
+        const hashParams = new URLSearchParams(url.split("#")[1] || "");
+        const idToken = hashParams.get("id_token");
+        resolve(idToken);
+      } catch (err) {
+        window.removeEventListener("message", onMessage);
+        popup?.close();
+        resolve(null);
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+
+    // Check if popup was closed
+    const checkInterval = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(checkInterval);
+        window.removeEventListener("message", onMessage);
+        resolve(null);
+      }
+    }, 500);
+
+    // Timeout after 2 minutes
+    setTimeout(() => {
+      clearInterval(checkInterval);
+      window.removeEventListener("message", onMessage);
+      popup?.close();
+      resolve(null);
+    }, 120000);
+  });
+}
+
+// Hook for native Google Sign-In - use this in components
+export function useGoogleAuth() {
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
+    iosClientId: GOOGLE_IOS_CLIENT_ID || GOOGLE_WEB_CLIENT_ID,
   });
 
-  const discovery = {
-    authorizationEndpoint: "https://www.facebook.com/v16.0/dialog/oauth",
-  } as any;
+  const signIn = async (): Promise<string | null> => {
+    if (Platform.OS === "web") {
+      return handleGoogleSignIn();
+    }
 
-  let result: any;
-  if (Platform.OS === "web" && typeof window !== "undefined") {
-    const authUrl = await request.makeAuthUrlAsync(discovery);
+    const result = await promptAsync();
 
-    result = await new Promise((resolve) => {
-      const timeoutMs = 60000;
-      let resolved = false;
-      const onMessage = (e: MessageEvent) => {
-        try {
-          if (!e?.data) return;
-          const url =
-            e.data?.url || (typeof e.data === "string" ? e.data : null);
-          if (!url) return;
-          console.debug("[oauthHandlers] received popup message", e.data);
-          const parsed = request.parseReturnUrl(url);
-          resolved = true;
-          window.removeEventListener("message", onMessage);
-          try {
-            popup?.close();
-          } catch (err) {}
-          resolve(parsed);
-        } catch (err) {
-          resolved = true;
-          window.removeEventListener("message", onMessage);
-          try {
-            popup?.close();
-          } catch (err) {}
-          resolve({ type: "error", error: err });
-        }
-      };
+    if (result?.type === "success") {
+      // The id_token is in authentication
+      return result.authentication?.idToken || null;
+    }
 
-      window.addEventListener("message", onMessage);
+    return null;
+  };
 
-      const popup = window.open(authUrl, "_blank", "width=500,height=700");
-
-      const checkInterval = setInterval(() => {
-        if (popup == null || popup.closed) {
-          clearInterval(checkInterval);
-          if (!resolved) {
-            window.removeEventListener("message", onMessage);
-            resolve({ type: "dismiss" });
-          }
-        }
-      }, 500);
-
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        if (!resolved) {
-          window.removeEventListener("message", onMessage);
-          try {
-            popup?.close();
-          } catch (err) {}
-          resolve({ type: "dismiss" });
-        }
-      }, timeoutMs);
-    });
-  } else {
-    result = await request.promptAsync(discovery);
-  }
-
-  if (result.type === "success" && result.params) {
-    const idToken = (result.params.access_token as string) || null;
-
-    return idToken;
-  }
-
-  if (result.type === "dismiss" || result.type === "cancel") return null;
-
-  throw new Error("Facebook Sign-In failed");
+  return { request, response, signIn, isReady: !!request };
 }

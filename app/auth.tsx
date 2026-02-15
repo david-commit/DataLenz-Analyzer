@@ -22,13 +22,7 @@ export default function AuthScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const themeColors = isDark ? colors.dark : colors.light;
-  const {
-    login,
-    register,
-    loginWithGoogle,
-    loginWithFacebook,
-    isAuthenticated,
-  } = useAuth();
+  const { login, register, loginWithGoogle, isAuthenticated } = useAuth();
 
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -105,19 +99,6 @@ export default function AuthScreen() {
       await loginWithGoogle();
     } catch (err: any) {
       setError(err.message || "Google Sign-In failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleFacebookSignIn = async () => {
-    setError("");
-    setIsLoading(true);
-
-    try {
-      await loginWithFacebook();
-    } catch (err: any) {
-      setError(err.message || "Facebook Sign-In failed");
     } finally {
       setIsLoading(false);
     }
@@ -316,27 +297,6 @@ export default function AuthScreen() {
                 style={[styles.googleButtonText, { color: themeColors.text }]}
               >
                 Continue with Google
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.googleButton,
-                {
-                  backgroundColor: themeColors.cardBackground,
-                  borderColor: themeColors.border,
-                  marginTop: 12,
-                },
-              ]}
-              onPress={handleFacebookSignIn}
-              disabled={true}
-              // disabled={isLoading}
-            >
-              <User size={20} color={themeColors.text} />
-              <Text
-                style={[styles.googleButtonText, { color: themeColors.text }]}
-              >
-                Continue with Facebook
               </Text>
             </Pressable>
           </View>

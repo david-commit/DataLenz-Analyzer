@@ -6,12 +6,18 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
+  Image,
+  Animated,
 } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { useFrameworkReady } from "@/hooks/useFrameworkReady";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { AppProvider } from "@/contexts/AppContext";
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 // Error Boundary to catch JavaScript errors and show error screen instead of white screen
 interface ErrorBoundaryState {
@@ -96,6 +102,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "#1a1a2e",
+  },
+  loadingContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingLogo: {
+    width: 120,
+    height: 120,
+    marginBottom: 24,
+    borderRadius: 24,
+  },
+  loadingTitle: {
+    fontSize: 32,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: 1,
+  },
+  loadingSubtitle: {
+    fontSize: 18,
+    fontWeight: "400",
+    color: "#4a90d9",
+    marginBottom: 40,
+    letterSpacing: 2,
+  },
+  loadingSpinnerContainer: {
+    marginBottom: 16,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: "#888888",
   },
   errorOverlay: {
     flex: 1,
@@ -193,6 +229,9 @@ export default function RootLayout() {
     useEffect(() => {
       if (isLoading) return;
 
+      // Hide splash screen once auth is determined
+      SplashScreen.hideAsync();
+
       // If authenticated, allow current path (do nothing)
       if (isAuthenticated) return;
 
@@ -201,10 +240,22 @@ export default function RootLayout() {
     }, [isAuthenticated, isLoading, router]);
 
     if (isLoading) {
-      // while auth is initializing, render a visible loading screen
+      // while auth is initializing, render a branded loading screen
       return (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ffffff" />
+          <View style={styles.loadingContent}>
+            <Image
+              source={require("@/assets/images/datalens-logo-with-backdrop.png")}
+              style={styles.loadingLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.loadingTitle}>DataLens</Text>
+            <Text style={styles.loadingSubtitle}>Analyzer</Text>
+            <View style={styles.loadingSpinnerContainer}>
+              <ActivityIndicator size="large" color="#4a90d9" />
+            </View>
+            <Text style={styles.loadingText}>Loading...</Text>
+          </View>
         </View>
       );
     }

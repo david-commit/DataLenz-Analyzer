@@ -7,8 +7,6 @@ import {
   onAuthStateChanged,
   getIdToken,
   signInWithCredential,
-  OAuthProvider,
-  FacebookAuthProvider,
   GoogleAuthProvider,
 } from "firebase/auth";
 import { auth } from "@/config/firebase";
@@ -151,37 +149,6 @@ export class AuthService {
     } catch (error: any) {
       console.error("[authService] loginWithGoogle error:", error);
       throw new Error(error.message || "Google Sign-In failed");
-    }
-  }
-
-  async loginWithFacebook(accessToken: string): Promise<User> {
-    try {
-      console.debug(
-        "[authService] loginWithFacebook received accessToken:",
-        accessToken?.slice?.(0, 32) + "..."
-      );
-      const credential = FacebookAuthProvider.credential(accessToken);
-      const userCredential = await signInWithCredential(auth, credential);
-      const user = userCredential.user;
-      const token = await getIdToken(user);
-
-      const userData: User = {
-        localId: user.uid,
-        email: user.email || "",
-        displayName: user.displayName || "",
-        emailVerified: user.emailVerified,
-      };
-
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.USER_DATA,
-        JSON.stringify(userData)
-      );
-      await setSecureItem("idToken", token);
-
-      return userData;
-    } catch (error: any) {
-      console.error("[authService] loginWithFacebook error:", error);
-      throw new Error(error.message || "Facebook Sign-In failed");
     }
   }
 
