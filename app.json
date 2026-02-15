@@ -10,9 +10,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/datalens-splash-screen.png",
-      "resizeMode": "cover",
-      "backgroundColor": "#1a1a2e"
+      "image": "./assets/images/datalens-logo-with-backdrop.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
     },
     "android": {
       "package": "com.datalens.analyzer",

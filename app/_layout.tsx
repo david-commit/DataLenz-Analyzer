@@ -101,37 +101,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#1a1a2e",
-  },
-  loadingContent: {
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#000000",
+    width: "100%",
+    height: "100%",
   },
   loadingLogo: {
-    width: 120,
-    height: 120,
-    marginBottom: 24,
-    borderRadius: 24,
-  },
-  loadingTitle: {
-    fontSize: 32,
-    fontWeight: "700",
-    color: "#ffffff",
-    letterSpacing: 1,
-  },
-  loadingSubtitle: {
-    fontSize: 18,
-    fontWeight: "400",
-    color: "#4a90d9",
-    marginBottom: 40,
-    letterSpacing: 2,
-  },
-  loadingSpinnerContainer: {
-    marginBottom: 16,
-  },
-  loadingText: {
-    fontSize: 14,
-    color: "#888888",
+    width: "50%",
+    height: undefined,
+    aspectRatio: 1,
   },
   errorOverlay: {
     flex: 1,
@@ -243,19 +220,11 @@ export default function RootLayout() {
       // while auth is initializing, render a branded loading screen
       return (
         <View style={styles.loadingContainer}>
-          <View style={styles.loadingContent}>
-            <Image
-              source={require("@/assets/images/datalens-logo-with-backdrop.png")}
-              style={styles.loadingLogo}
-              resizeMode="contain"
-            />
-            <Text style={styles.loadingTitle}>DataLens</Text>
-            <Text style={styles.loadingSubtitle}>Analyzer</Text>
-            <View style={styles.loadingSpinnerContainer}>
-              <ActivityIndicator size="large" color="#4a90d9" />
-            </View>
-            <Text style={styles.loadingText}>Loading...</Text>
-          </View>
+          <Image
+            source={require("@/assets/images/datalens-logo-with-backdrop.png")}
+            style={styles.loadingLogo}
+            resizeMode="contain"
+          />
         </View>
       );
     }

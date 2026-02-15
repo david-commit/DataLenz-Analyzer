@@ -5,10 +5,9 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { Platform } from "react-native";
 import { authService } from "@/services/auth";
 import { User } from "@/types/auth";
-import { handleGoogleSignIn, useGoogleAuth } from "@/utils/oauthHandlers";
+import { useGoogleAuth } from "@/utils/oauthHandlers";
 
 interface AuthContextType {
   user: User | null;
@@ -68,21 +67,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const loginWithGoogle = async () => {
     try {
-      let idToken: string | null = null;
-
-      if (Platform.OS === "web") {
-        idToken = await handleGoogleSignIn();
-      } else {
-        // Use hook-based approach for native
-        idToken = await googleSignIn();
-      }
+      // Use the hook-based approach for all platforms
+      const idToken = await googleSignIn();
 
       if (!idToken) {
-        throw new Error("Failed to get Google ID token");
+        throw new Error("Google sign-in was cancelled or failed");
       }
       const user = await authService.loginWithGoogle(idToken);
       setUser(user);
     } catch (error) {
+      console.error("[AuthContext] loginWithGoogle error:", error);
       throw error;
     }
   };
